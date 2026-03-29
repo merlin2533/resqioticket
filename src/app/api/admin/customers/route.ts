@@ -39,6 +39,6 @@ export async function POST(request: NextRequest) {
     data: { email: parsed.data.email, name: parsed.data.name, password: hashed },
   });
 
-  const { password: _, ...safe } = customer;
+  const { password: _password, ...safe } = customer;
   return NextResponse.json(safe, { status: 201 });
 }
