@@ -9,10 +9,14 @@ echo ""
 
 # Run database migrations
 echo "» Datenbank-Migrationen werden ausgeführt..."
-if npx prisma migrate deploy 2>/dev/null; then
+MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
+MIGRATE_EXIT=$?
+if [ $MIGRATE_EXIT -eq 0 ]; then
   echo "  ✓ Migrationen erfolgreich"
 else
-  echo "  ! Keine Migrationen oder Fehler – weiter..."
+  echo "  ✗ Migration fehlgeschlagen (Exit-Code $MIGRATE_EXIT):"
+  echo "$MIGRATE_OUTPUT" | sed 's/^/    /'
+  echo "  Starte trotzdem – bitte Datenbankverbindung und Schema prüfen."
 fi
 
 echo ""

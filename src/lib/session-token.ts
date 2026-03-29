@@ -1,7 +1,15 @@
 // Edge-safe session token helpers (uses Web Crypto API, no Node.js-only modules)
 
 function getSecret(): string {
-  return process.env.CUSTOMER_SESSION_SECRET ?? process.env.API_KEY ?? "changeme";
+  const secret = process.env.CUSTOMER_SESSION_SECRET ?? process.env.API_KEY;
+  if (!secret) {
+    console.warn(
+      "[session-token] Neither CUSTOMER_SESSION_SECRET nor API_KEY is set. " +
+      "Using insecure fallback — set CUSTOMER_SESSION_SECRET in production."
+    );
+    return "changeme";
+  }
+  return secret;
 }
 
 async function hmacSign(data: string, secret: string): Promise<string> {
