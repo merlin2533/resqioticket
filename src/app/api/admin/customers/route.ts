@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     data: { email: parsed.data.email, name: parsed.data.name, password: hashed },
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _password, ...safe } = customer;
   return NextResponse.json(safe, { status: 201 });
 }

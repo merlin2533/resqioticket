@@ -27,6 +27,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (parsed.data.password !== undefined) data.password = await hashPassword(parsed.data.password);
 
   const customer = await prisma.customer.update({ where: { id }, data });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _password, ...safe } = customer;
   return NextResponse.json(safe);
 }
