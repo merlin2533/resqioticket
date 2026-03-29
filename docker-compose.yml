@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: resqioticket
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/resqioticket
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      API_KEY: ${API_KEY:-default-dev-api-key}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      EMAIL_FROM: ${EMAIL_FROM:-support@yourdomain.com}
+      CRON_SECRET: ${CRON_SECRET:-default-cron-secret}
+      REMINDER_INTERVAL_HOURS: ${REMINDER_INTERVAL_HOURS:-24}
+      REMINDER_ESCALATION_DAYS: ${REMINDER_ESCALATION_DAYS:-3}
+      INBOUND_WEBHOOK_SECRET: ${INBOUND_WEBHOOK_SECRET:-}
+
+volumes:
+  postgres_data:

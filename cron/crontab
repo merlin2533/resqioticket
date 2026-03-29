@@ -1,0 +1,2 @@
+# Run reminder check every hour
+0 * * * * /app/cron/reminder.sh >> /var/log/cron.log 2>&1

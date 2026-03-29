@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AgentRole {
+  ADMIN
+  AGENT
+}
+
+enum CommentAuthorType {
+  AGENT
+  CUSTOMER
+  SYSTEM
+}
+
+model Agent {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
+  role            AgentRole @default(AGENT)
+  isActive        Boolean   @default(true)
+  reminderEnabled Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assignedTickets Ticket[]
+  comments        Comment[]
+
+  @@map("agents")
+}
+
+model Ticket {
+  id            String         @id @default(cuid())
+  number        Int            @unique @default(autoincrement())
+  subject       String
+  description   String
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+  email         String
+  name          String
+  metadata      Json?
+  externalToken String         @unique @default(cuid())
+  assignedToId  String?
+  assignedTo    Agent?         @relation(fields: [assignedToId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+
+  comments Comment[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([email])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@map("tickets")
+}
+
+model Comment {
+  id          String            @id @default(cuid())
+  ticketId    String
+  ticket      Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorType  CommentAuthorType
+  authorId    String?
+  author      Agent?            @relation(fields: [authorId], references: [id])
+  authorName  String
+  authorEmail String
+  body        String
+  isInternal  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+
+  @@index([ticketId])
+  @@map("comments")
+}
+
+model Settings {
+  id                    String  @id @default("default")
+  reminderEnabled       Boolean @default(true)
+  reminderIntervalHours Int     @default(24)
+  escalationDays        Int     @default(3)
+  emailFrom             String  @default("support@yourdomain.com")
+
+  @@map("settings")
+}

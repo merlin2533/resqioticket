@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { validateApiKey } from "@/lib/auth";
+import { createTicketSchema, ticketQuerySchema } from "@/lib/validators";
+import { sendTicketCreatedEmail } from "@/lib/email";
+import { Prisma } from "@/generated/prisma/client";
+
+export async function GET(request: NextRequest) {
+  const authError = validateApiKey(request);
+  if (authError) return authError;
+
+  const searchParams = Object.fromEntries(request.nextUrl.searchParams);
+  const parsed = ticketQuerySchema.safeParse(searchParams);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid query parameters", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { status, priority, assignedTo, email, search, sortBy, sortOrder, page, pageSize } =
+    parsed.data;
+
+  const where: Prisma.TicketWhereInput = {};
+  if (status) where.status = status;
+  if (priority) where.priority = priority;
+  if (assignedTo) where.assignedToId = assignedTo;
+  if (email) where.email = email;
+  if (search) {
+    where.OR = [
+      { subject: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const [tickets, total] = await Promise.all([
+    prisma.ticket.findMany({
+      where,
+      orderBy: { [sortBy]: sortOrder },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        assignedTo: { select: { id: true, name: true, email: true } },
+        _count: { select: { comments: true } },
+      },
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  return NextResponse.json({
+    data: tickets,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const authError = validateApiKey(request);
+  if (authError) return authError;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = createTicketSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const ticket = await prisma.ticket.create({
+    data: parsed.data,
+  });
+
+  // Send confirmation email asynchronously
+  sendTicketCreatedEmail({
+    ticketNumber: ticket.number,
+    subject: ticket.subject,
+    externalToken: ticket.externalToken,
+    recipientEmail: ticket.email,
+    recipientName: ticket.name,
+  }).catch((err) => console.error("Failed to send ticket created email:", err));
+
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+  return NextResponse.json(
+    {
+      data: ticket,
+      portalLink: `${appUrl}/portal/tickets/${ticket.externalToken}`,
+    },
+    { status: 201 }
+  );
+}
