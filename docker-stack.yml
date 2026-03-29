@@ -1,6 +1,33 @@
 version: "3.8"
 
 services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--providers.swarm=true"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@resqio.io}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -26,15 +53,13 @@ services:
           - node.role == manager
 
   app:
-    image: ${IMAGE_NAME:-resqioticket:latest}
-    ports:
-      - "3000:3000"
+    image: ${IMAGE_NAME:-merlin2539/resqioticket:latest}
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/resqioticket
       RESEND_API_KEY: ${RESEND_API_KEY}
       API_KEY: ${API_KEY:-default-dev-api-key}
-      APP_URL: ${APP_URL:-http://localhost:3000}
-      EMAIL_FROM: ${EMAIL_FROM:-support@yourdomain.com}
+      APP_URL: ${APP_URL:-https://ticket.resqio.io}
+      EMAIL_FROM: ${EMAIL_FROM:-support@resqio.io}
       CRON_SECRET: ${CRON_SECRET:-default-cron-secret}
       REMINDER_INTERVAL_HOURS: ${REMINDER_INTERVAL_HOURS:-24}
       REMINDER_ESCALATION_DAYS: ${REMINDER_ESCALATION_DAYS:-3}
@@ -54,7 +79,15 @@ services:
         parallelism: 1
         delay: 5s
         order: stop-first
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sgit_ticket.rule=Host(`ticket.resqio.io`)"
+        - "traefik.http.routers.sgit_ticket.entrypoints=websecure"
+        - "traefik.http.routers.sgit_ticket.tls.certresolver=letsencrypt"
+        - "traefik.http.services.sgit_ticket.loadbalancer.server.port=3000"
 
 volumes:
   postgres_data:
+    driver: local
+  traefik_letsencrypt:
     driver: local
