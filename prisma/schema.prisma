@@ -203,11 +203,28 @@ model TicketRelation {
 }
 
 model Settings {
-  id                    String  @id @default("default")
-  reminderEnabled       Boolean @default(true)
-  reminderIntervalHours Int     @default(24)
-  escalationDays        Int     @default(3)
-  emailFrom             String  @default("support@yourdomain.com")
+  id                     String  @id @default("default")
+  reminderEnabled        Boolean @default(true)
+  reminderIntervalHours  Int     @default(24)
+  escalationDays         Int     @default(3)
+  emailFrom              String  @default("support@yourdomain.com")
+  centralNotifyEmail     String?
+  notifyAgentOnComment   Boolean @default(true)
+  notifyCreatorOnComment Boolean @default(true)
 
   @@map("settings")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  name      String
+  subject   String
+  htmlBody  String
+  variables String   @default("")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_templates")
 }

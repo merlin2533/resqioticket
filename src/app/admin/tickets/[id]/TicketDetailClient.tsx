@@ -62,6 +62,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const [saving, setSaving]     = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentInternal, setCommentInternal] = useState(false);
+  const [notifyCreator, setNotifyCreator] = useState(true);
   const [sendingComment, setSendingComment] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "attachments" | "relations" | "audit">("comments");
   const [linkTicketNum, setLinkTicketNum] = useState("");
@@ -127,6 +128,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
         authorName: "Admin",
         authorEmail: "admin@resqio.ticket",
         isInternal: commentInternal,
+        notifyCreator: commentInternal ? false : notifyCreator,
       }),
     });
     setCommentBody("");
@@ -256,6 +258,12 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                         <input type="checkbox" checked={commentInternal} onChange={(e) => setCommentInternal(e.target.checked)} className="rounded" />
                         Intern (nicht für Kunden sichtbar)
                       </label>
+                      {!commentInternal && (
+                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                          <input type="checkbox" checked={notifyCreator} onChange={(e) => setNotifyCreator(e.target.checked)} className="rounded" />
+                          Mail an Ersteller senden
+                        </label>
+                      )}
                       <button
                         onClick={handleSendComment}
                         disabled={sendingComment || !commentBody.trim()}

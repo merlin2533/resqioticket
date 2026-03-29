@@ -10,6 +10,8 @@ const nav = [
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
   { href: "/admin/automations", label: "Automatisierung", icon: "⚡" },
   { href: "/admin/audit",       label: "Audit-Log",    icon: "📜" },
+  { href: "/admin/settings",         label: "Einstellungen",  icon: "⚙" },
+  { href: "/admin/email-templates",  label: "E-Mail-Vorlagen", icon: "✉" },
 ];
 
 export function AdminSidebar() {
