@@ -11,9 +11,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^3.3.0",
     "@prisma/adapter-pg": "^7.6.0",
-    "@prisma/adapter-pg-worker": "^6.9.0",
     "@prisma/client": "^7.6.0",
-    "@prisma/pg-worker": "^6.9.0",
     "@react-email/components": "^1.0.10",
     "@tiptap/extension-image": "^3.21.0",
     "@tiptap/extension-link": "^3.21.0",
