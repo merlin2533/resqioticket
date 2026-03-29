@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { createAuditLog } from "./audit";
+import { TicketPriority, TicketStatus } from "@/generated/prisma/enums";
 
 interface Ticket {
   id: string;
@@ -46,12 +47,20 @@ function evaluateConditions(ticket: Ticket, conditions: Condition[], logic: stri
 
 async function executeAction(ticketId: string, action: Action): Promise<void> {
   switch (action.type) {
-    case "set_priority":
-      await prisma.ticket.update({ where: { id: ticketId }, data: { priority: action.value as never } });
+    case "set_priority": {
+      const priority = Object.values(TicketPriority).find((v) => v === action.value);
+      if (priority) {
+        await prisma.ticket.update({ where: { id: ticketId }, data: { priority } });
+      }
       break;
-    case "set_status":
-      await prisma.ticket.update({ where: { id: ticketId }, data: { status: action.value as never } });
+    }
+    case "set_status": {
+      const status = Object.values(TicketStatus).find((v) => v === action.value);
+      if (status) {
+        await prisma.ticket.update({ where: { id: ticketId }, data: { status } });
+      }
       break;
+    }
     case "assign_agent":
       await prisma.ticket.update({ where: { id: ticketId }, data: { assignedToId: action.value } });
       break;

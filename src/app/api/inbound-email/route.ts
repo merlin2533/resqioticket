@@ -15,7 +15,13 @@ function parseSender(from: string): { name: string; email: string } {
   if (match) {
     return { name: match[1].trim(), email: match[2].trim() };
   }
-  return { name: from, email: from };
+  // Plain email address (no display name)
+  const emailMatch = from.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+  if (emailMatch) {
+    return { name: from, email: from };
+  }
+  // Unrecognised format – use placeholder so ticket creation doesn't fail
+  return { name: from.trim() || "Unknown", email: "unknown@inbound" };
 }
 
 export async function POST(request: NextRequest) {
@@ -23,7 +29,22 @@ export async function POST(request: NextRequest) {
   const webhookSecret = process.env.INBOUND_WEBHOOK_SECRET;
   if (webhookSecret) {
     const signature = request.headers.get("x-webhook-signature");
-    if (!signature || signature !== webhookSecret) {
+    if (!signature) {
+      return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+    }
+    // Timing-safe comparison to prevent timing attacks
+    const enc = new TextEncoder();
+    const sigBytes = enc.encode(signature);
+    const secretBytes = enc.encode(webhookSecret);
+    if (
+      sigBytes.length !== secretBytes.length ||
+      !crypto.subtle ||
+      (() => {
+        let diff = 0;
+        for (let i = 0; i < sigBytes.length; i++) diff |= sigBytes[i] ^ secretBytes[i];
+        return diff !== 0;
+      })()
+    ) {
       return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
     }
   }
