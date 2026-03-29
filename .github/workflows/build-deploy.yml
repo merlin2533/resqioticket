@@ -56,7 +56,7 @@ jobs:
           tags: |
             type=sha
             type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -80,6 +80,9 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            docker compose pull app
-            docker compose up -d --force-recreate app
+            export IMAGE_NAME=${{ env.IMAGE_NAME }}:${{ github.sha }}
+            docker stack deploy \
+              --with-registry-auth \
+              --compose-file docker-stack.yml \
+              resqioticket
             docker image prune -f
