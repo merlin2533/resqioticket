@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/auth";
 import { updateTicketSchema } from "@/lib/validators";
 import { sendStatusChangeEmail, sendAssignmentEmail } from "@/lib/email";
+import { createAuditLog } from "@/lib/audit";
+import { runAutomations } from "@/lib/automations";
 
 export async function GET(
   request: NextRequest,
@@ -123,6 +125,12 @@ export async function PATCH(
       assignedTo: { select: { id: true, name: true, email: true } },
     },
   });
+
+  // Audit log
+  createAuditLog({ ticketId: id, action: "ticket_updated", entityType: "ticket", entityId: id, oldValue: { status: existing.status, priority: existing.priority }, newValue: parsed.data }).catch(() => {});
+
+  // Run automations
+  runAutomations("ticket_updated", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
 
   return NextResponse.json({ data: ticket });
 }

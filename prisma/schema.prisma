@@ -45,6 +45,7 @@ model Agent {
 
   assignedTickets Ticket[]
   comments        Comment[]
+  auditLogs       AuditLog[]
 
   @@map("agents")
 }
@@ -67,7 +68,12 @@ model Ticket {
   resolvedAt    DateTime?
   closedAt      DateTime?
 
-  comments Comment[]
+  comments    Comment[]
+  tags        TicketTag[]
+  attachments Attachment[]
+  auditLogs   AuditLog[]
+  sourceRelations TicketRelation[] @relation("SourceTicket")
+  targetRelations TicketRelation[] @relation("TargetTicket")
 
   @@index([status])
   @@index([priority])
@@ -92,6 +98,108 @@ model Comment {
 
   @@index([ticketId])
   @@map("comments")
+}
+
+model Tag {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  color     String      @default("#6366f1")
+  createdAt DateTime    @default(now())
+
+  tickets   TicketTag[]
+
+  @@map("tags")
+}
+
+model TicketTag {
+  ticketId  String
+  tagId     String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([ticketId, tagId])
+  @@map("ticket_tags")
+}
+
+model TicketTemplate {
+  id          String         @id @default(cuid())
+  name        String
+  subject     String
+  description String
+  priority    TicketPriority @default(MEDIUM)
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("ticket_templates")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  ticketId   String?
+  agentId    String?
+  action     String
+  entityType String
+  entityId   String
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  agent  Agent?  @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model AutomationRule {
+  id         String   @id @default(cuid())
+  name       String
+  trigger    String
+  conditions Json
+  actions    Json
+  isActive   Boolean  @default(true)
+  runCount   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("automation_rules")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  filename     String
+  mimeType     String
+  size         Int
+  driveFileId  String
+  driveUrl     String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("attachments")
+}
+
+model TicketRelation {
+  id           String   @id @default(cuid())
+  ticketId     String
+  relatedId    String
+  relationType String
+  ticket       Ticket   @relation("SourceTicket", fields: [ticketId], references: [id], onDelete: Cascade)
+  related      Ticket   @relation("TargetTicket", fields: [relatedId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([ticketId, relatedId, relationType])
+  @@index([ticketId])
+  @@index([relatedId])
+  @@map("ticket_relations")
 }
 
 model Settings {

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/auth";
 import { createTicketSchema, ticketQuerySchema } from "@/lib/validators";
 import { sendTicketCreatedEmail } from "@/lib/email";
+import { createAuditLog } from "@/lib/audit";
+import { runAutomations } from "@/lib/automations";
 import { Prisma } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -81,6 +83,12 @@ export async function POST(request: NextRequest) {
   const ticket = await prisma.ticket.create({
     data: parsed.data,
   });
+
+  // Audit log
+  createAuditLog({ ticketId: ticket.id, action: "ticket_created", entityType: "ticket", entityId: ticket.id, newValue: { number: ticket.number, subject: ticket.subject } }).catch(() => {});
+
+  // Run automations asynchronously
+  runAutomations("ticket_created", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
 
   // Send confirmation email asynchronously
   sendTicketCreatedEmail({
