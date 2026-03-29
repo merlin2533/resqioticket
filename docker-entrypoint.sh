@@ -9,8 +9,10 @@ echo ""
 
 # Run database migrations
 echo "» Datenbank-Migrationen werden ausgeführt..."
+set +e
 MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
 MIGRATE_EXIT=$?
+set -e
 if [ $MIGRATE_EXIT -eq 0 ]; then
   echo "  ✓ Migrationen erfolgreich"
 else
