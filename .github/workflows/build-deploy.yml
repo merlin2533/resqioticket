@@ -80,7 +80,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
-            export IMAGE_NAME=${{ env.IMAGE_NAME }}:${{ github.sha }}
+            export IMAGE_NAME=${{ env.IMAGE_NAME }}:latest
             docker stack deploy \
               --with-registry-auth \
               --compose-file docker-stack.yml \
