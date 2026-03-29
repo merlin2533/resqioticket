@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (parsed.data.password !== undefined) data.password = await hashPassword(parsed.data.password);
 
   const customer = await prisma.customer.update({ where: { id }, data });
-  const { password: _, ...safe } = customer;
+  const { password: _password, ...safe } = customer;
   return NextResponse.json(safe);
 }
 
