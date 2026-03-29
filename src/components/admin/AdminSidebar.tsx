@@ -7,6 +7,7 @@ const nav = [
   { href: "/admin",             label: "Dashboard",    icon: "▦" },
   { href: "/admin/tickets",     label: "Tickets",      icon: "✉" },
   { href: "/admin/agents",      label: "Agenten",      icon: "👥" },
+  { href: "/admin/customers",   label: "Kunden",       icon: "🏢" },
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
   { href: "/admin/automations", label: "Automatisierung", icon: "⚡" },
   { href: "/admin/audit",       label: "Audit-Log",    icon: "📜" },

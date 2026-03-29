@@ -6,10 +6,16 @@ export default function Home() {
         <p className="text-lg text-gray-600 mb-8">
           Modernes API-first Ticketsystem
         </p>
-        <div className="mb-8">
+        <div className="mb-8 flex gap-3 justify-center">
+          <a
+            href="/portal"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+          >
+            Kunden-Portal
+          </a>
           <a
             href="/admin/login"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            className="inline-block bg-gray-800 hover:bg-gray-900 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
           >
             Admin Login
           </a>
