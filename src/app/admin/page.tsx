@@ -1,7 +1,13 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 
-async function getStats() {
+type Stats = {
+  open: number; inProgress: number; waiting: number; resolved: number;
+  total: number; urgent: number; unassigned: number; recentTickets: Awaited<ReturnType<typeof prisma.ticket.findMany>>;
+};
+
+async function getStats(): Promise<Stats | { error: string }> {
+  try {
   const [open, inProgress, waiting, resolved, total, urgent, unassigned, recentTickets] =
     await Promise.all([
       prisma.ticket.count({ where: { status: "OPEN" } }),
@@ -18,6 +24,11 @@ async function getStats() {
       }),
     ]);
   return { open, inProgress, waiting, resolved, total, urgent, unassigned, recentTickets };
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code;
+    if (code === "P2021") return { error: "Datenbank nicht initialisiert. Bitte Migrationen ausführen." };
+    return { error: "Datenbankfehler: " + String(e) };
+  }
 }
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
@@ -34,6 +45,19 @@ const priorityConfig: Record<string, string> = {
 
 export default async function AdminDashboard() {
   const stats = await getStats();
+
+  if ("error" in stats) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Dashboard</h1>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <h2 className="text-base font-semibold text-red-800 mb-2">Datenbankfehler</h2>
+          <p className="text-sm text-red-700">{stats.error}</p>
+          <p className="text-xs text-red-500 mt-3">Bitte stelle sicher, dass die Datenbank erreichbar ist und führe <code className="bg-red-100 px-1 rounded">npx prisma migrate deploy</code> aus.</p>
+        </div>
+      </div>
+    );
+  }
 
   const cards = [
     { label: "Offen",          value: stats.open,       color: "bg-blue-500" },
