@@ -50,6 +50,20 @@ model Agent {
   @@map("agents")
 }
 
+model Customer {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets   Ticket[]
+
+  @@map("customers")
+}
+
 model Ticket {
   id            String         @id @default(cuid())
   number        Int            @unique @default(autoincrement())
@@ -63,6 +77,8 @@ model Ticket {
   externalToken String         @unique @default(cuid())
   assignedToId  String?
   assignedTo    Agent?         @relation(fields: [assignedToId], references: [id])
+  customerId    String?
+  customer      Customer?      @relation(fields: [customerId], references: [id])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
@@ -79,6 +95,7 @@ model Ticket {
   @@index([priority])
   @@index([email])
   @@index([assignedToId])
+  @@index([customerId])
   @@index([createdAt])
   @@map("tickets")
 }

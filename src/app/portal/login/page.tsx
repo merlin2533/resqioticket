@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function AdminLoginPage() {
-  const [apiKey, setApiKey] = useState("");
+export default function PortalLoginPage() {
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -13,34 +13,48 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const res = await fetch("/api/admin/auth", {
+    const res = await fetch("/api/portal/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey }),
+      body: JSON.stringify(form),
     });
     setLoading(false);
     if (res.ok) {
-      router.push("/admin");
+      router.push("/portal/dashboard");
     } else {
-      setError("Ungültiger API-Key");
+      const d = await res.json();
+      setError(d.error ?? "Anmeldung fehlgeschlagen");
     }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">ResQio Admin</h1>
-        <p className="text-sm text-gray-500 mb-6">API-Key eingeben um fortzufahren</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Kunden-Portal</h1>
+        <p className="text-sm text-gray-500 mb-6">Mit Ihrem Konto anmelden</p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">API-Key</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">E-Mail</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+              autoComplete="email"
+              placeholder="name@beispiel.de"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
             <input
               type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
               autoComplete="current-password"
-              placeholder="••••••••••••••••"
+              placeholder="••••••••"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
