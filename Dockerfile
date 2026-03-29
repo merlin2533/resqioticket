@@ -24,7 +24,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Install cron
-RUN apk add --no-cache dcron curl
+RUN apk add --no-cache dcron curl postgresql-client
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
