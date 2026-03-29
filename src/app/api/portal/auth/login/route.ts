@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const valid = await verifyPassword(parsed.data.password, customer.password);
   if (!valid) return NextResponse.json({ error: "Ungültige Anmeldedaten" }, { status: 401 });
 
-  const token = createSessionToken(customer.id);
+  const token = await createSessionToken(customer.id);
   const response = NextResponse.json({ ok: true });
   response.cookies.set("customer_session", token, {
     httpOnly: true,

@@ -39,6 +39,7 @@ export default function AdminLoginPage() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               required
+              autoComplete="current-password"
               placeholder="••••••••••••••••"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />

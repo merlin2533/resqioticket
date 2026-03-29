@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySessionToken } from "@/lib/customer-auth";
+import { verifySessionToken } from "@/lib/session-token";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect all /admin routes except /admin/login
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   // Protect customer portal routes
   if (pathname.startsWith("/portal/dashboard") || pathname.startsWith("/portal/submit")) {
     const token = request.cookies.get("customer_session")?.value;
-    if (!token || !verifySessionToken(token)) {
+    if (!token || !(await verifySessionToken(token))) {
       return NextResponse.redirect(new URL("/portal/login", request.url));
     }
   }
