@@ -1,23 +1,28 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 
 type Stats = {
   open: number; inProgress: number; waiting: number; resolved: number;
   total: number; urgent: number; unassigned: number; recentTickets: Awaited<ReturnType<typeof prisma.ticket.findMany>>;
 };
 
-async function getStats(): Promise<Stats | { error: string }> {
+async function getStats(agentId?: string): Promise<Stats | { error: string }> {
   try {
+  const agentFilter = agentId ? { assignedToId: agentId } : {};
   const [open, inProgress, waiting, resolved, total, urgent, unassigned, recentTickets] =
     await Promise.all([
-      prisma.ticket.count({ where: { status: "OPEN" } }),
-      prisma.ticket.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.ticket.count({ where: { status: "WAITING" } }),
-      prisma.ticket.count({ where: { status: "RESOLVED" } }),
-      prisma.ticket.count(),
-      prisma.ticket.count({ where: { priority: "URGENT", status: { in: ["OPEN", "IN_PROGRESS"] } } }),
-      prisma.ticket.count({ where: { assignedToId: null, status: { in: ["OPEN", "IN_PROGRESS"] } } }),
+      prisma.ticket.count({ where: { ...agentFilter, status: "OPEN" } }),
+      prisma.ticket.count({ where: { ...agentFilter, status: "IN_PROGRESS" } }),
+      prisma.ticket.count({ where: { ...agentFilter, status: "WAITING" } }),
+      prisma.ticket.count({ where: { ...agentFilter, status: "RESOLVED" } }),
+      prisma.ticket.count({ where: agentFilter }),
+      prisma.ticket.count({ where: { ...agentFilter, priority: "URGENT", status: { in: ["OPEN", "IN_PROGRESS"] } } }),
+      agentId
+        ? Promise.resolve(0)
+        : prisma.ticket.count({ where: { assignedToId: null, status: { in: ["OPEN", "IN_PROGRESS"] } } }),
       prisma.ticket.findMany({
+        where: agentFilter,
         orderBy: { createdAt: "desc" },
         take: 8,
         include: { assignedTo: { select: { name: true } }, tags: { include: { tag: true } } },
@@ -44,7 +49,11 @@ const priorityConfig: Record<string, string> = {
 };
 
 export default async function AdminDashboard() {
-  const stats = await getStats();
+  const hdrs = await headers();
+  const agentId = hdrs.get("x-agent-id");
+  const agentRole = hdrs.get("x-agent-role");
+  const filterAgentId = agentId && agentRole === "AGENT" ? agentId : undefined;
+  const stats = await getStats(filterAgentId);
 
   if ("error" in stats) {
     return (

@@ -37,6 +37,10 @@ export const updateAgentSchema = z.object({
   role: z.enum(["ADMIN", "AGENT"]).optional(),
   isActive: z.boolean().optional(),
   reminderEnabled: z.boolean().optional(),
+  notifyOnNewTicket: z.boolean().optional(),
+  notifyOnComment: z.boolean().optional(),
+  notifyOnStatusChange: z.boolean().optional(),
+  password: z.string().min(8).optional(),
 });
 
 export const ticketQuerySchema = z.object({
