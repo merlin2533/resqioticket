@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export const metadata: Metadata = {
   title: "ResQio Admin",
@@ -10,7 +11,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <AdminSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar with notification bell */}
+        <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-end px-4 shrink-0">
+          <NotificationBell apiKey="" />
+        </header>
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 }

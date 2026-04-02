@@ -5,6 +5,8 @@ import { createCommentSchema } from "@/lib/validators";
 import { sendNewCommentEmail, sendAgentNotifyEmail, sendCentralNotifyEmail } from "@/lib/email";
 import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
+import { fireWebhooks } from "@/lib/webhooks";
+import { emitTicketEvent } from "@/lib/sse-events";
 import { z } from "zod";
 
 const commentWithNotifySchema = createCommentSchema.extend({
@@ -41,7 +43,17 @@ export async function POST(
 
   const ticket = await prisma.ticket.findUnique({
     where: { id },
-    include: { assignedTo: true },
+    include: {
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          notifyOnComment: true,
+        },
+      },
+    },
   });
   if (!ticket) return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
 
@@ -68,6 +80,17 @@ export async function POST(
   // Automation trigger
   runAutomations("comment_added", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
 
+  if (!parsed.data.isInternal) {
+    emitTicketEvent({
+      type: "comment_added",
+      ticketId: id,
+      ticketNumber: ticket.number,
+      subject: ticket.subject,
+      message: `${parsed.data.authorName}: ${parsed.data.body.replace(/<[^>]+>/g, "").slice(0, 80)}`,
+      agentId: ticket.assignedToId ?? undefined,
+    });
+  }
+
   // Load global settings once
   const settings = await prisma.settings.findUnique({ where: { id: "default" } });
   const notifyCreatorDefault = settings?.notifyCreatorOnComment ?? true;
@@ -78,23 +101,34 @@ export async function POST(
 
   // ── 1. Notify CREATOR (customer) when agent comments ────────────────────
   if (isPublicComment && parsed.data.authorType === "AGENT") {
-    const shouldNotify = parsed.data.notifyCreator ?? notifyCreatorDefault;
-    if (shouldNotify) {
-      sendNewCommentEmail({
-        ticketNumber:  ticket.number,
-        subject:       ticket.subject,
-        externalToken: ticket.externalToken,
-        recipientEmail: ticket.email,
-        recipientName:  ticket.name,
-        commentBody:   parsed.data.body,
-        commentAuthor: parsed.data.authorName,
-      }).catch((err) => console.error("sendNewCommentEmail failed:", err));
+    const shouldNotifyGlobal = parsed.data.notifyCreator ?? notifyCreatorDefault;
+    if (shouldNotifyGlobal) {
+      // Check customer preference if customer is linked
+      let customerWantsEmail = true;
+      if (ticket.customerId) {
+        const customer = await prisma.customer.findUnique({
+          where: { id: ticket.customerId },
+          select: { notifyOnComment: true },
+        });
+        customerWantsEmail = customer?.notifyOnComment ?? true;
+      }
+      if (customerWantsEmail) {
+        sendNewCommentEmail({
+          ticketNumber:  ticket.number,
+          subject:       ticket.subject,
+          externalToken: ticket.externalToken,
+          recipientEmail: ticket.email,
+          recipientName:  ticket.name,
+          commentBody:   parsed.data.body,
+          commentAuthor: parsed.data.authorName,
+        }).catch((err) => console.error("sendNewCommentEmail failed:", err));
+      }
     }
   }
 
   // ── 2. Notify ASSIGNED AGENT when customer/system comments ──────────────
   if (isPublicComment && parsed.data.authorType !== "AGENT" && notifyAgentDefault) {
-    if (ticket.assignedTo?.isActive) {
+    if (ticket.assignedTo?.isActive && ticket.assignedTo.notifyOnComment) {
       sendAgentNotifyEmail({
         ticketNumber:  ticket.number,
         subject:       ticket.subject,
@@ -122,6 +156,24 @@ export async function POST(
       customerEmail: ticket.email,
       agentName:     ticket.assignedTo?.name ?? "–",
     }).catch((err) => console.error("sendCentralNotifyEmail failed:", err));
+  }
+
+  // Fire webhooks for new public comment
+  if (isPublicComment) {
+    prisma.settings.findUnique({ where: { id: "default" } }).then(settings => {
+      if (settings) {
+        fireWebhooks(settings, "comment_added", {
+          ticketNumber: ticket.number,
+          subject: ticket.subject,
+          externalToken: ticket.externalToken,
+          priority: ticket.priority,
+          status: ticket.status,
+          customerName: ticket.name,
+          customerEmail: ticket.email,
+          agentName: ticket.assignedTo?.name,
+        }, { commentAuthor: parsed.data.authorName });
+      }
+    }).catch(() => {});
   }
 
   return NextResponse.json({ data: comment }, { status: 201 });

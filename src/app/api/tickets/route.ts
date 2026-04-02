@@ -6,6 +6,8 @@ import { sendTicketCreatedEmail } from "@/lib/email";
 import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
 import { Prisma } from "@/generated/prisma/client";
+import { fireWebhooks } from "@/lib/webhooks";
+import { emitTicketEvent } from "@/lib/sse-events";
 
 export async function GET(request: NextRequest) {
   const authError = validateApiKey(request);
@@ -87,6 +89,14 @@ export async function POST(request: NextRequest) {
   // Audit log
   createAuditLog({ ticketId: ticket.id, action: "ticket_created", entityType: "ticket", entityId: ticket.id, newValue: { number: ticket.number, subject: ticket.subject } }).catch(() => {});
 
+  emitTicketEvent({
+    type: "ticket_created",
+    ticketId: ticket.id,
+    ticketNumber: ticket.number,
+    subject: ticket.subject,
+    message: `Von ${ticket.name} (${ticket.email})`,
+  });
+
   // Run automations asynchronously
   runAutomations("ticket_created", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
 
@@ -98,6 +108,21 @@ export async function POST(request: NextRequest) {
     recipientEmail: ticket.email,
     recipientName: ticket.name,
   }).catch((err) => console.error("Failed to send ticket created email:", err));
+
+  // Fire Slack/Teams webhooks
+  prisma.settings.findUnique({ where: { id: "default" } }).then(settings => {
+    if (settings) {
+      fireWebhooks(settings, "ticket_created", {
+        ticketNumber: ticket.number,
+        subject: ticket.subject,
+        externalToken: ticket.externalToken,
+        priority: ticket.priority,
+        status: ticket.status,
+        customerName: ticket.name,
+        customerEmail: ticket.email,
+      });
+    }
+  }).catch(() => {});
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
 

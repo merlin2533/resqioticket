@@ -5,6 +5,8 @@ import { updateTicketSchema } from "@/lib/validators";
 import { sendStatusChangeEmail, sendAssignmentEmail } from "@/lib/email";
 import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
+import { fireWebhooks } from "@/lib/webhooks";
+import { emitTicketEvent } from "@/lib/sse-events";
 
 export async function GET(
   request: NextRequest,
@@ -87,16 +89,43 @@ export async function PATCH(
       },
     });
 
-    // Send status change email
-    sendStatusChangeEmail({
-      ticketNumber: existing.number,
-      subject: existing.subject,
-      externalToken: existing.externalToken,
-      recipientEmail: existing.email,
-      recipientName: existing.name,
-      oldStatus: existing.status,
-      newStatus: parsed.data.status,
-    }).catch((err) => console.error("Failed to send status change email:", err));
+    // Check customer preference for status change email
+    let sendStatusEmail = true;
+    if (existing.customerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: existing.customerId },
+        select: { notifyOnStatusChange: true },
+      });
+      sendStatusEmail = customer?.notifyOnStatusChange ?? true;
+    }
+    if (sendStatusEmail) {
+      sendStatusChangeEmail({
+        ticketNumber: existing.number,
+        subject: existing.subject,
+        externalToken: existing.externalToken,
+        recipientEmail: existing.email,
+        recipientName: existing.name,
+        oldStatus: existing.status,
+        newStatus: parsed.data.status,
+      }).catch((err) => console.error("Failed to send status change email:", err));
+    }
+
+    // Fire webhooks for status change
+    const oldStatus = existing.status;
+    const newStatus = parsed.data.status!;
+    prisma.settings.findUnique({ where: { id: "default" } }).then(settings => {
+      if (settings) {
+        fireWebhooks(settings, "status_changed", {
+          ticketNumber: existing.number,
+          subject: existing.subject,
+          externalToken: existing.externalToken,
+          priority: existing.priority,
+          status: newStatus,
+          customerName: existing.name,
+          customerEmail: existing.email,
+        }, { oldStatus, newStatus });
+      }
+    }).catch(() => {});
   }
 
   // Handle assignment changes
@@ -105,7 +134,7 @@ export async function PATCH(
       where: { id: parsed.data.assignedToId },
     });
 
-    if (agent) {
+    if (agent && agent.notifyOnNewTicket) {
       sendAssignmentEmail({
         ticketNumber: existing.number,
         subject: existing.subject,
@@ -131,6 +160,17 @@ export async function PATCH(
 
   // Run automations
   runAutomations("ticket_updated", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
+
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    emitTicketEvent({
+      type: "ticket_updated",
+      ticketId: id,
+      ticketNumber: existing.number,
+      subject: existing.subject,
+      message: `Status: ${existing.status} → ${parsed.data.status}`,
+      agentId: ticket.assignedTo?.id ?? undefined,
+    });
+  }
 
   return NextResponse.json({ data: ticket });
 }
