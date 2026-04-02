@@ -12,6 +12,8 @@ type Settings = {
   centralNotifyEmail: string | null;
   notifyAgentOnComment: boolean;
   notifyCreatorOnComment: boolean;
+  slackWebhookUrl: string | null;
+  teamsWebhookUrl: string | null;
 };
 
 function getApiKey() {
@@ -39,7 +41,12 @@ function Toggle({ value, onChange, label, description }: { value: boolean; onCha
 
 export function SettingsClient({ settings }: { settings: Settings }) {
   const router = useRouter();
-  const [form, setForm] = useState({ ...settings, centralNotifyEmail: settings.centralNotifyEmail ?? "" });
+  const [form, setForm] = useState({
+    ...settings,
+    centralNotifyEmail: settings.centralNotifyEmail ?? "",
+    slackWebhookUrl: settings.slackWebhookUrl ?? "",
+    teamsWebhookUrl: settings.teamsWebhookUrl ?? "",
+  });
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -59,6 +66,8 @@ export function SettingsClient({ settings }: { settings: Settings }) {
       body: JSON.stringify({
         ...form,
         centralNotifyEmail: form.centralNotifyEmail || null,
+        slackWebhookUrl: form.slackWebhookUrl || null,
+        teamsWebhookUrl: form.teamsWebhookUrl || null,
       }),
     });
     setSaving(false);
@@ -126,6 +135,48 @@ export function SettingsClient({ settings }: { settings: Settings }) {
                 onChange={(e) => set("emailFrom", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+          </div>
+        </section>
+
+        {/* Webhook-Integrationen */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-1">Webhook-Integrationen</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Benachrichtigungen an Slack und Microsoft Teams senden bei: neues Ticket, Statusänderung, neuer öffentlicher Kommentar.
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Slack Incoming Webhook URL
+              </label>
+              <input
+                type="url"
+                value={form.slackWebhookUrl}
+                onChange={(e) => set("slackWebhookUrl", e.target.value)}
+                placeholder="https://hooks.slack.com/services/… (leer = deaktiviert)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Incoming Webhook in Slack unter <em>Apps → Incoming WebHooks</em> erstellen.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Microsoft Teams Webhook URL
+              </label>
+              <input
+                type="url"
+                value={form.teamsWebhookUrl}
+                onChange={(e) => set("teamsWebhookUrl", e.target.value)}
+                placeholder="https://… .webhook.office.com/… (leer = deaktiviert)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Incoming Webhook im Teams-Kanal unter <em>Connectors → Incoming Webhook</em> erstellen.
+              </p>
             </div>
           </div>
         </section>

@@ -11,6 +11,8 @@ const updateSchema = z.object({
   centralNotifyEmail:     z.string().email().nullable().optional(),
   notifyAgentOnComment:   z.boolean().optional(),
   notifyCreatorOnComment: z.boolean().optional(),
+  slackWebhookUrl:        z.string().url().nullable().optional(),
+  teamsWebhookUrl:        z.string().url().nullable().optional(),
 });
 
 async function ensureSettings() {
