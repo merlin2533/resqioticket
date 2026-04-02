@@ -7,6 +7,7 @@ import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
 import { fireWebhooks } from "@/lib/webhooks";
 import { emitTicketEvent } from "@/lib/sse-events";
+import { log } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -107,7 +108,7 @@ export async function PATCH(
         recipientName: existing.name,
         oldStatus: existing.status,
         newStatus: parsed.data.status,
-      }).catch((err) => console.error("Failed to send status change email:", err));
+      }).catch((err) => log.error("Failed to send status change email", err));
     }
 
     // Fire webhooks for status change
@@ -143,7 +144,7 @@ export async function PATCH(
         recipientName: existing.name,
         agentEmail: agent.email,
         agentName: agent.name,
-      }).catch((err) => console.error("Failed to send assignment email:", err));
+      }).catch((err) => log.error("Failed to send assignment email", err));
     }
   }
 

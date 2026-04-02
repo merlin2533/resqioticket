@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
 
@@ -54,6 +54,12 @@ function getApiKey() {
   return "";
 }
 
+type CustomField = {
+  id: string; name: string; label: string; type: string;
+  options: string[] | null; required: boolean; isActive: boolean; sortOrder: number;
+};
+type CustomFieldValue = { fieldId: string; value: string };
+
 export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const router = useRouter();
   const [status, setStatus]     = useState(ticket.status);
@@ -67,7 +73,38 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const [activeTab, setActiveTab] = useState<"comments" | "attachments" | "relations" | "audit">("comments");
   const [linkTicketNum, setLinkTicketNum] = useState("");
   const [linkType, setLinkType] = useState("linked");
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [savingCustomField, setSavingCustomField] = useState<string | null>(null);
   void API_KEY;
+
+  useEffect(() => {
+    const apiKey = getApiKey();
+    Promise.all([
+      fetch("/api/custom-fields", { headers: { "x-api-key": apiKey } }).then(r => r.json()),
+      fetch(`/api/tickets/${ticket.id}/custom-fields`, { headers: { "x-api-key": apiKey } }).then(r => r.json()),
+    ]).then(([fieldsRes, valuesRes]) => {
+      const activeFields: CustomField[] = (fieldsRes.data ?? []).filter((f: CustomField) => f.isActive);
+      setCustomFields(activeFields);
+      const valMap: Record<string, string> = {};
+      for (const v of (valuesRes.data ?? [])) {
+        valMap[v.fieldId] = v.value;
+      }
+      setCustomValues(valMap);
+    }).catch(() => {});
+  }, [ticket.id]);
+
+  async function handleCustomFieldChange(fieldId: string, value: string) {
+    setCustomValues(prev => ({ ...prev, [fieldId]: value }));
+    setSavingCustomField(fieldId);
+    const apiKey = getApiKey();
+    await fetch(`/api/tickets/${ticket.id}/custom-fields`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ fieldId, value }),
+    });
+    setSavingCustomField(null);
+  }
 
   async function patchTicket(data: object) {
     setSaving(true);
@@ -407,6 +444,61 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
               </select>
             )}
           </div>
+
+          {/* Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Eigene Felder</h3>
+              <div className="space-y-3">
+                {customFields.map(field => (
+                  <div key={field.id}>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {field.label}{field.required && <span className="ml-1 text-red-500">*</span>}
+                      {savingCustomField === field.id && <span className="ml-1 text-gray-400 font-normal">…</span>}
+                    </label>
+                    {field.type === "text" && (
+                      <input
+                        type="text"
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => setCustomValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        onBlur={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                    {field.type === "number" && (
+                      <input
+                        type="number"
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => setCustomValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        onBlur={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                    {field.type === "boolean" && (
+                      <button
+                        onClick={() => handleCustomFieldChange(field.id, customValues[field.id] === "true" ? "false" : "true")}
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${customValues[field.id] === "true" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+                      >
+                        {customValues[field.id] === "true" ? "Ja" : "Nein"}
+                      </button>
+                    )}
+                    {field.type === "select" && (
+                      <select
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">– Bitte wählen –</option>
+                        {(field.options ?? []).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Meta */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-xs text-gray-500 space-y-1.5">

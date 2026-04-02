@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { CommentForm } from "./comment-form";
 import { sanitizeContent } from "@/lib/sanitize";
+import { AttachmentUpload } from "./AttachmentUpload";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   OPEN: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -32,6 +33,7 @@ export default async function TicketPortalPage({
         where: { isInternal: false },
         orderBy: { createdAt: "asc" },
       },
+      attachments: { orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -150,6 +152,9 @@ export default async function TicketPortalPage({
             ))}
           </div>
         )}
+
+        {/* Attachments */}
+        <AttachmentUpload token={token} initialAttachments={ticket.attachments} />
 
         {/* Comment form */}
         {ticket.status !== "CLOSED" && (

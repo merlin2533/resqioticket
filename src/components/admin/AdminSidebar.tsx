@@ -9,8 +9,10 @@ const nav = [
   { href: "/admin/agents",      label: "Agenten",      icon: "👥" },
   { href: "/admin/customers",   label: "Kunden",       icon: "🏢" },
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
-  { href: "/admin/automations", label: "Automatisierung", icon: "⚡" },
-  { href: "/admin/audit",       label: "Audit-Log",    icon: "📜" },
+  { href: "/admin/automations",   label: "Automatisierung", icon: "⚡" },
+  { href: "/admin/custom-fields", label: "Eigene Felder",   icon: "🔧" },
+  { href: "/admin/api-docs",      label: "API Docs",        icon: "📖" },
+  { href: "/admin/audit",         label: "Audit-Log",       icon: "📜" },
   { href: "/admin/settings",         label: "Einstellungen",  icon: "⚙" },
   { href: "/admin/email-templates",  label: "E-Mail-Vorlagen", icon: "✉" },
 ];

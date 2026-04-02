@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendReminderEmail } from "@/lib/email";
+import { log } from "@/lib/logger";
+import { checkSlaBreach } from "@/lib/sla";
 
 export async function POST(request: NextRequest) {
   // Authenticate via API key or cron secret
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
       await sendReminderEmail(agent.email, agent.name, tickets);
       sentCount++;
     } catch (err) {
-      console.error(`Failed to send reminder to ${agent.email}:`, err);
+      log.error(`Failed to send reminder to ${agent.email}`, err);
     }
   }
 
@@ -120,15 +122,18 @@ export async function POST(request: NextRequest) {
         await sendReminderEmail(admin.email, admin.name, unassignedTickets);
         sentCount++;
       } catch (err) {
-        console.error(`Failed to send reminder to admin ${admin.email}:`, err);
+        log.error(`Failed to send reminder to admin ${admin.email}`, err);
       }
     }
   }
+
+  const breachCount = await checkSlaBreach();
 
   return NextResponse.json({
     message: "Reminders processed",
     sent: sentCount,
     escalated: ticketsToEscalate.length,
     totalOpenTickets: openTickets.length,
+    slaBreached: breachCount,
   });
 }

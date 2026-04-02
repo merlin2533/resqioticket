@@ -4,6 +4,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 
+function getApiKey() {
+  if (typeof document !== "undefined") {
+    return document.cookie.match(/admin_session=([^;]+)/)?.[1] ?? "";
+  }
+  return "";
+}
+
 const statusConfig: Record<string, { label: string; cls: string }> = {
   OPEN:        { label: "Offen",          cls: "bg-blue-100 text-blue-700" },
   IN_PROGRESS: { label: "In Bearbeitung", cls: "bg-yellow-100 text-yellow-700" },
@@ -26,6 +33,8 @@ type Ticket = {
   email: string; name: string; createdAt: Date; assignedTo: Agent | null;
   tags: { tag: Tag }[];
   _count: { comments: number; attachments: number };
+  slaBreached: boolean;
+  slaDeadline: Date | null;
 };
 
 interface Props {
@@ -41,7 +50,39 @@ interface Props {
 export function TicketListClient({ tickets, total, page, pageSize, tags, filters }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(filters.q ?? "");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const totalPages = Math.ceil(total / pageSize);
+
+  const allSelected = tickets.length > 0 && tickets.every((t) => selectedIds.has(t.id));
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tickets.map((t) => t.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  }
+
+  async function applyBulkAction(action: string, value?: string) {
+    if (action === "delete" && !confirm(`${selectedIds.size} Tickets wirklich löschen?`)) return;
+    const res = await fetch("/api/tickets/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": getApiKey() },
+      body: JSON.stringify({ ids: Array.from(selectedIds), action, value }),
+    });
+    if (res.ok) {
+      setSelectedIds(new Set());
+      router.refresh();
+    }
+  }
 
   function buildUrl(params: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
@@ -113,6 +154,14 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="rounded border-gray-300 cursor-pointer"
+                />
+              </th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-14">#</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500">Betreff</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-32">Status</th>
@@ -126,11 +175,24 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
               const sc = statusConfig[t.status] ?? statusConfig.OPEN;
               const pc = priorityConfig[t.priority] ?? priorityConfig.MEDIUM;
               return (
-                <tr key={t.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/admin/tickets/${t.id}`)}>
+                <tr key={t.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return; router.push(`/admin/tickets/${t.id}`); }}>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(t.id)}
+                      onChange={() => toggleSelect(t.id)}
+                      className="rounded border-gray-300 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-mono text-gray-400">{t.number}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900 truncate max-w-xs">{t.subject}</span>
+                      {t.slaBreached && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium shrink-0" title={t.slaDeadline ? `SLA überschritten seit ${new Date(t.slaDeadline).toLocaleString("de-DE")}` : "SLA überschritten"}>
+                          SLA
+                        </span>
+                      )}
                       {t.tags.slice(0, 3).map((tt) => (
                         <span key={tt.tag.id} className="text-xs px-1.5 py-0.5 rounded-full text-white shrink-0" style={{ backgroundColor: tt.tag.color }}>
                           {tt.tag.name}
@@ -149,7 +211,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
               );
             })}
             {tickets.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
             )}
           </tbody>
         </table>
@@ -165,6 +227,34 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           </div>
         )}
       </div>
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 z-40">
+          <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
+          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-white">× Abwählen</button>
+          <div className="h-4 w-px bg-gray-600" />
+          <select onChange={e => { if (e.target.value) applyBulkAction("set_status", e.target.value); e.target.value = ""; }}
+            className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-600 cursor-pointer">
+            <option value="">Status setzen…</option>
+            <option value="OPEN">Offen</option>
+            <option value="IN_PROGRESS">In Bearbeitung</option>
+            <option value="WAITING">Wartend</option>
+            <option value="RESOLVED">Gelöst</option>
+            <option value="CLOSED">Geschlossen</option>
+          </select>
+          <select onChange={e => { if (e.target.value) applyBulkAction("set_priority", e.target.value); e.target.value = ""; }}
+            className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-600 cursor-pointer">
+            <option value="">Priorität…</option>
+            <option value="LOW">Niedrig</option>
+            <option value="MEDIUM">Mittel</option>
+            <option value="HIGH">Hoch</option>
+            <option value="URGENT">Dringend</option>
+          </select>
+          <button onClick={() => applyBulkAction("delete")}
+            className="text-xs bg-red-600 hover:bg-red-700 px-3 py-1 rounded font-medium">
+            🗑 Löschen
+          </button>
+        </div>
+      )}
     </div>
   );
 }

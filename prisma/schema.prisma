@@ -91,13 +91,16 @@ model Ticket {
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
   closedAt      DateTime?
+  slaDeadline   DateTime?
+  slaBreached   Boolean        @default(false)
 
-  comments        Comment[]
-  tags            TicketTag[]
-  attachments     Attachment[]
-  auditLogs       AuditLog[]
-  sourceRelations TicketRelation[] @relation("SourceTicket")
-  targetRelations TicketRelation[] @relation("TargetTicket")
+  comments          Comment[]
+  tags              TicketTag[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+  sourceRelations   TicketRelation[] @relation("SourceTicket")
+  targetRelations   TicketRelation[] @relation("TargetTicket")
+  customFieldValues TicketCustomFieldValue[]
 
   @@index([status])
   @@index([priority])
@@ -238,8 +241,43 @@ model Settings {
   notifyCreatorOnComment Boolean @default(true)
   slackWebhookUrl        String?
   teamsWebhookUrl        String?
+  slaLowHours            Int     @default(72)
+  slaMediumHours         Int     @default(48)
+  slaHighHours           Int     @default(24)
+  slaUrgentHours         Int     @default(4)
+  slaEnabled             Boolean @default(false)
 
   @@map("settings")
+}
+
+model CustomField {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  label     String
+  type      String   // text | number | boolean | select
+  options   Json?
+  required  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  values TicketCustomFieldValue[]
+
+  @@map("custom_fields")
+}
+
+model TicketCustomFieldValue {
+  id       String      @id @default(cuid())
+  ticketId String
+  fieldId  String
+  value    String
+  ticket   Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  field    CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, fieldId])
+  @@index([ticketId])
+  @@map("ticket_custom_field_values")
 }
 
 model EmailTemplate {

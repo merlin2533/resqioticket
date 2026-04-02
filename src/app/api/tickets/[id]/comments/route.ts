@@ -8,6 +8,7 @@ import { runAutomations } from "@/lib/automations";
 import { fireWebhooks } from "@/lib/webhooks";
 import { emitTicketEvent } from "@/lib/sse-events";
 import { z } from "zod";
+import { log } from "@/lib/logger";
 
 const commentWithNotifySchema = createCommentSchema.extend({
   notifyCreator: z.boolean().optional(),
@@ -121,7 +122,7 @@ export async function POST(
           recipientName:  ticket.name,
           commentBody:   parsed.data.body,
           commentAuthor: parsed.data.authorName,
-        }).catch((err) => console.error("sendNewCommentEmail failed:", err));
+        }).catch((err) => log.error("sendNewCommentEmail failed", err));
       }
     }
   }
@@ -138,7 +139,7 @@ export async function POST(
         commentAuthor: parsed.data.authorName,
         commentBody:   parsed.data.body,
         customerEmail: ticket.email,
-      }).catch((err) => console.error("sendAgentNotifyEmail failed:", err));
+      }).catch((err) => log.error("sendAgentNotifyEmail failed", err));
     }
   }
 
@@ -155,7 +156,7 @@ export async function POST(
       commentBody:   parsed.data.body,
       customerEmail: ticket.email,
       agentName:     ticket.assignedTo?.name ?? "–",
-    }).catch((err) => console.error("sendCentralNotifyEmail failed:", err));
+    }).catch((err) => log.error("sendCentralNotifyEmail failed", err));
   }
 
   // Fire webhooks for new public comment

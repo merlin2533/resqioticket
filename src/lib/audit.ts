@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { log } from "./logger";
 
 interface AuditOptions {
   ticketId?: string;
@@ -28,6 +29,6 @@ export async function createAuditLog(opts: AuditOptions): Promise<void> {
       },
     });
   } catch (err) {
-    console.error("Failed to write audit log:", err);
+    log.error("Failed to write audit log", err);
   }
 }

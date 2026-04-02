@@ -7,6 +7,8 @@ import { runAutomations } from "@/lib/automations";
 import { emitTicketEvent } from "@/lib/sse-events";
 import { fireWebhooks } from "@/lib/webhooks";
 import { createAuditLog } from "@/lib/audit";
+import { setTicketSla } from "@/lib/sla";
+import { log } from "@/lib/logger";
 
 const schema = z.object({
   subject: z.string().min(1).max(255),
@@ -37,6 +39,8 @@ export async function POST(request: NextRequest) {
 
   createAuditLog({ ticketId: ticket.id, action: "ticket_created", entityType: "ticket", entityId: ticket.id, newValue: { number: ticket.number, subject: ticket.subject } }).catch(() => {});
 
+  setTicketSla(ticket.id, ticket.priority).catch(() => {});
+
   runAutomations("ticket_created", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
 
   sendTicketCreatedEmail({
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     externalToken: ticket.externalToken,
     recipientEmail: ticket.email,
     recipientName: ticket.name,
-  }).catch(err => console.error("Failed to send ticket created email:", err));
+  }).catch((err) => log.error("Failed to send ticket created email", err));
 
   emitTicketEvent({
     type: "ticket_created",
