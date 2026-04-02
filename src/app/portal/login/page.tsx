@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function PortalLoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -67,6 +68,17 @@ export default function PortalLoginPage() {
             {loading ? "..." : "Anmelden"}
           </button>
         </form>
+        <div className="mt-4 space-y-2 text-center">
+          <Link href="/portal/forgot-password" className="block text-xs text-gray-400 hover:text-gray-600">
+            Passwort vergessen?
+          </Link>
+          <p className="text-xs text-gray-400">
+            Noch kein Konto?{" "}
+            <Link href="/portal/register" className="text-blue-600 hover:underline">
+              Jetzt registrieren
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
