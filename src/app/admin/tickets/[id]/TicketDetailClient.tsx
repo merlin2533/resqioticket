@@ -58,7 +58,6 @@ type CustomField = {
   id: string; name: string; label: string; type: string;
   options: string[] | null; required: boolean; isActive: boolean; sortOrder: number;
 };
-type CustomFieldValue = { fieldId: string; value: string };
 
 export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const router = useRouter();
