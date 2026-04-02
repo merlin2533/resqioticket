@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar with notification bell */}
         <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-end px-4 shrink-0">
-          <NotificationBell apiKey="" />
+          <NotificationBell />
         </header>
         <main className="flex-1 overflow-auto">{children}</main>
       </div>

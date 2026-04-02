@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+// NextRequest used by PATCH only
 import { prisma } from "@/lib/prisma";
 import { getCustomerFromRequest } from "@/lib/customer-auth";
 import { z } from "zod";
@@ -8,7 +9,7 @@ const schema = z.object({
   notifyOnStatusChange: z.boolean().optional(),
 });
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const customer = await getCustomerFromRequest();
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   return NextResponse.json({

@@ -23,7 +23,7 @@ const EVENT_ICONS: Record<string, string> = {
   comment_added: "💬",
 };
 
-export function NotificationBell({ apiKey }: { apiKey: string }) {
+export function NotificationBell() {
   const [events, setEvents] = useState<TicketEvent[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
