@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/auth";
 import { z } from "zod";
 import { createAuditLog } from "@/lib/audit";
+import { log } from "@/lib/logger";
 
 const schema = z.object({
   ids: z.array(z.string()).min(1).max(100),
@@ -55,10 +56,16 @@ export async function POST(request: NextRequest) {
       break;
     }
 
-    case "delete":
+    case "delete": {
+      const toDelete = await prisma.ticket.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, number: true, subject: true },
+      });
+      log.warn("Bulk delete tickets", { count: toDelete.length, tickets: toDelete.map(t => ({ id: t.id, number: t.number, subject: t.subject })) });
       await prisma.ticket.deleteMany({ where: { id: { in: ids } } });
-      count = ids.length;
+      count = toDelete.length;
       break;
+    }
   }
 
   // Audit log for bulk action

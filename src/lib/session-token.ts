@@ -3,9 +3,10 @@
 function getSecret(): string {
   const secret = process.env.CUSTOMER_SESSION_SECRET ?? process.env.API_KEY;
   if (!secret) {
-    console.warn(
-      "[session-token] Neither CUSTOMER_SESSION_SECRET nor API_KEY is set. " +
-      "Using insecure fallback — set CUSTOMER_SESSION_SECRET in production."
+    console.error(
+      "SECURITY ERROR: [session-token] Neither CUSTOMER_SESSION_SECRET nor API_KEY is set. " +
+      "Using insecure fallback 'changeme' — THIS IS UNSAFE IN PRODUCTION. " +
+      "Set CUSTOMER_SESSION_SECRET immediately."
     );
     return "changeme";
   }

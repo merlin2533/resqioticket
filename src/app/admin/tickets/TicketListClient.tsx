@@ -96,6 +96,24 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
     router.push(buildUrl({ page: "1" }));
   }
 
+  function handleExport() {
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.priority) params.set("priority", filters.priority);
+    const apiKey = getApiKey();
+    // Can't set headers on navigation, so use a fetch + blob download approach
+    fetch(`/api/tickets/export?${params.toString()}`, { headers: { "x-api-key": apiKey } })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `tickets-${new Date().toISOString().split("T")[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -143,6 +161,13 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           <option value="">Alle Tags</option>
           {tags.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
         </select>
+
+        <button
+          onClick={handleExport}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1.5"
+        >
+          ↓ CSV
+        </button>
 
         {(filters.status || filters.priority || filters.q || filters.tag) && (
           <button onClick={() => router.push("/admin/tickets")} className="text-sm text-gray-500 hover:text-red-500">✕ Reset</button>

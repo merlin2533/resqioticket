@@ -24,6 +24,24 @@ export async function middleware(request: NextRequest) {
     if (agentToken) {
       const agentData = await verifyAgentToken(agentToken);
       if (agentData) {
+        // RBAC: restrict ADMIN-only routes
+        const adminOnlyPaths = [
+          "/admin/agents",
+          "/admin/customers",
+          "/admin/settings",
+          "/admin/email-templates",
+          "/admin/automations",
+          "/admin/custom-fields",
+          "/admin/audit",
+          "/admin/api-docs",
+        ];
+        if (
+          agentData.role !== "ADMIN" &&
+          adminOnlyPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))
+        ) {
+          return NextResponse.redirect(new URL("/admin/tickets", request.url));
+        }
+
         // Forward agent info as request headers for server components
         const requestHeaders = new Headers(request.headers);
         requestHeaders.set("x-agent-id", agentData.agentId);

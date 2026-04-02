@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createTicketSchema = z.object({
   subject: z.string().min(1, "Subject is required").max(500),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().min(1, "Description is required").max(100000),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().default("MEDIUM"),
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(200),
@@ -18,7 +18,7 @@ export const updateTicketSchema = z.object({
 });
 
 export const createCommentSchema = z.object({
-  body: z.string().min(1, "Comment body is required"),
+  body: z.string().min(1, "Comment body is required").max(100000),
   authorType: z.enum(["AGENT", "CUSTOMER", "SYSTEM"]).optional().default("AGENT"),
   authorId: z.string().optional(),
   authorName: z.string().min(1, "Author name is required"),
@@ -65,7 +65,7 @@ export const inboundEmailSchema = z.object({
 });
 
 export const portalCommentSchema = z.object({
-  body: z.string().min(1, "Comment is required"),
+  body: z.string().min(1, "Comment is required").max(100000),
   authorName: z.string().min(1, "Name is required"),
   authorEmail: z.string().email("Invalid email"),
 });

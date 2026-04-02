@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   res.cookies.set("agent_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: 60 * 60 * 24 * 7,
     path: "/",
   });

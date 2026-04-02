@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { inboundEmailSchema } from "@/lib/validators";
 import { sendTicketCreatedEmail } from "@/lib/email";
+import { log } from "@/lib/logger";
 
 // Extract ticket number from subject line: [TICKET-123]
 function extractTicketNumber(subject: string): number | null {
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
     externalToken: ticket.externalToken,
     recipientEmail: ticket.email,
     recipientName: ticket.name,
-  }).catch((err) => console.error("Failed to send ticket created email:", err));
+  }).catch((err) => log.error("Failed to send ticket created email", err));
 
   return NextResponse.json(
     {

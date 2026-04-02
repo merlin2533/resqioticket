@@ -50,6 +50,7 @@ model Agent {
   assignedTickets Ticket[]
   comments        Comment[]
   auditLogs       AuditLog[]
+  watchedTickets  TicketWatcher[]
 
   @@map("agents")
 }
@@ -101,6 +102,7 @@ model Ticket {
   sourceRelations   TicketRelation[] @relation("SourceTicket")
   targetRelations   TicketRelation[] @relation("TargetTicket")
   customFieldValues TicketCustomFieldValue[]
+  watchers          TicketWatcher[]
 
   @@index([status])
   @@index([priority])
@@ -228,6 +230,19 @@ model TicketRelation {
   @@index([ticketId])
   @@index([relatedId])
   @@map("ticket_relations")
+}
+
+model TicketWatcher {
+  id       String @id @default(cuid())
+  ticketId String
+  agentId  String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agent    Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([ticketId, agentId])
+  @@index([ticketId])
+  @@map("ticket_watchers")
 }
 
 model Settings {

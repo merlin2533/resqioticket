@@ -1,7 +1,16 @@
 // Edge-safe agent session token helpers (uses Web Crypto API)
 
 function getSecret(): string {
-  return process.env.AGENT_SESSION_SECRET ?? process.env.API_KEY ?? "changeme";
+  const secret = process.env.AGENT_SESSION_SECRET ?? process.env.API_KEY;
+  if (!secret) {
+    console.error(
+      "SECURITY ERROR: [agent-session] Neither AGENT_SESSION_SECRET nor API_KEY is set. " +
+      "Using insecure fallback 'changeme' — THIS IS UNSAFE IN PRODUCTION. " +
+      "Set AGENT_SESSION_SECRET immediately."
+    );
+    return "changeme";
+  }
+  return secret;
 }
 
 async function hmacSign(data: string, secret: string): Promise<string> {
