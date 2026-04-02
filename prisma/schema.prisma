@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum TicketStatus {
@@ -35,14 +34,18 @@ enum CommentAuthorType {
 }
 
 model Agent {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
-  role            AgentRole @default(AGENT)
-  isActive        Boolean   @default(true)
-  reminderEnabled Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String
+  role                 AgentRole @default(AGENT)
+  password             String?
+  isActive             Boolean   @default(true)
+  reminderEnabled      Boolean   @default(true)
+  notifyOnNewTicket    Boolean   @default(true)
+  notifyOnComment      Boolean   @default(true)
+  notifyOnStatusChange Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   assignedTickets Ticket[]
   comments        Comment[]
@@ -52,15 +55,17 @@ model Agent {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  name                 String
+  password             String
+  isActive             Boolean  @default(true)
+  notifyOnComment      Boolean  @default(true)
+  notifyOnStatusChange Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  tickets   Ticket[]
+  tickets Ticket[]
 
   @@map("customers")
 }
@@ -85,10 +90,10 @@ model Ticket {
   resolvedAt    DateTime?
   closedAt      DateTime?
 
-  comments    Comment[]
-  tags        TicketTag[]
-  attachments Attachment[]
-  auditLogs   AuditLog[]
+  comments        Comment[]
+  tags            TicketTag[]
+  attachments     Attachment[]
+  auditLogs       AuditLog[]
   sourceRelations TicketRelation[] @relation("SourceTicket")
   targetRelations TicketRelation[] @relation("TargetTicket")
 
@@ -119,12 +124,12 @@ model Comment {
 }
 
 model Tag {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  color     String      @default("#6366f1")
-  createdAt DateTime    @default(now())
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String    @default("#6366f1")
+  createdAt DateTime  @default(now())
 
-  tickets   TicketTag[]
+  tickets TicketTag[]
 
   @@map("tags")
 }
@@ -229,6 +234,8 @@ model Settings {
   centralNotifyEmail     String?
   notifyAgentOnComment   Boolean @default(true)
   notifyCreatorOnComment Boolean @default(true)
+  slackWebhookUrl        String?
+  teamsWebhookUrl        String?
 
   @@map("settings")
 }
