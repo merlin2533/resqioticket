@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { CommentForm } from "./comment-form";
+import { sanitizeContent } from "@/lib/sanitize";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   OPEN: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -88,7 +89,7 @@ export default async function TicketPortalPage({
           </div>
           <div
             className="prose prose-sm max-w-none text-gray-700"
-            dangerouslySetInnerHTML={{ __html: ticket.description }}
+            dangerouslySetInnerHTML={{ __html: sanitizeContent(ticket.description) }}
           />
         </div>
 
@@ -143,7 +144,7 @@ export default async function TicketPortalPage({
                 </div>
                 <div
                   className="prose prose-sm max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: comment.body }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeContent(comment.body) }}
                 />
               </div>
             ))}
