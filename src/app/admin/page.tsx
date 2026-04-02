@@ -2,9 +2,17 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 
+type RecentTicket = {
+  id: string; number: number; subject: string;
+  status: string; priority: string;
+  assignedTo: { name: string } | null;
+  tags: { tagId: string; tag: { name: string; color: string } }[];
+};
+
 type Stats = {
   open: number; inProgress: number; waiting: number; resolved: number;
-  total: number; urgent: number; unassigned: number; recentTickets: Awaited<ReturnType<typeof prisma.ticket.findMany>>;
+  total: number; urgent: number; unassigned: number;
+  recentTickets: RecentTicket[];
 };
 
 async function getStats(agentId?: string): Promise<Stats | { error: string }> {

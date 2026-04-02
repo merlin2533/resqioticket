@@ -36,7 +36,7 @@ export function sanitizeContent(html: string): string {
         attribs: {
           ...attribs,
           rel: "noopener noreferrer",
-          target: attribs.target === "_blank" ? "_blank" : undefined,
+          ...(attribs.target === "_blank" ? { target: "_blank" } : {}),
         },
       }),
     },

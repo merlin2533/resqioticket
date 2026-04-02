@@ -31,8 +31,8 @@ export function checkRateLimit(key: string, maxRequests: number, windowMs: numbe
 
   // Cleanup old entries periodically (every 100 calls on any key)
   if (Math.random() < 0.01) {
-    for (const [k, ts] of store.entries()) {
-      const filtered = ts.filter(t => t > Date.now() - windowMs);
+    for (const [k, ts] of Array.from(store.entries())) {
+      const filtered = (ts as number[]).filter((t: number) => t > Date.now() - windowMs);
       if (filtered.length === 0) store.delete(k);
       else store.set(k, filtered);
     }
