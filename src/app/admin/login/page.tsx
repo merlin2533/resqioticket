@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const [apiKey, setApiKey] = useState("");
@@ -53,6 +54,12 @@ export default function AdminLoginPage() {
             {loading ? "..." : "Anmelden"}
           </button>
         </form>
+        <p className="text-center text-xs text-gray-400 mt-4">
+          Agent?{" "}
+          <Link href="/admin/agent-login" className="text-blue-600 hover:underline">
+            Mit E-Mail anmelden
+          </Link>
+        </p>
       </div>
     </div>
   );

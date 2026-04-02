@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 const nav = [
   { href: "/admin",             label: "Dashboard",    icon: "▦" },
   { href: "/admin/tickets",     label: "Tickets",      icon: "✉" },
+  { href: "/admin/stats",       label: "Statistiken",  icon: "📊" },
   { href: "/admin/agents",      label: "Agenten",      icon: "👥" },
   { href: "/admin/customers",   label: "Kunden",       icon: "🏢" },
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
-  { href: "/admin/automations", label: "Automatisierung", icon: "⚡" },
-  { href: "/admin/audit",       label: "Audit-Log",    icon: "📜" },
+  { href: "/admin/automations",   label: "Automatisierung", icon: "⚡" },
+  { href: "/admin/custom-fields", label: "Eigene Felder",   icon: "🔧" },
+  { href: "/admin/api-docs",      label: "API Docs",        icon: "📖" },
+  { href: "/admin/audit",         label: "Audit-Log",       icon: "📜" },
   { href: "/admin/settings",         label: "Einstellungen",  icon: "⚙" },
   { href: "/admin/email-templates",  label: "E-Mail-Vorlagen", icon: "✉" },
 ];
@@ -19,7 +22,10 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   async function handleLogout() {
-    await fetch("/api/admin/auth", { method: "DELETE" });
+    await Promise.all([
+      fetch("/api/admin/auth", { method: "DELETE" }),
+      fetch("/api/admin/agent-auth", { method: "DELETE" }),
+    ]);
     window.location.href = "/admin/login";
   }
 

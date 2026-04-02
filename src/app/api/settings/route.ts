@@ -11,6 +11,13 @@ const updateSchema = z.object({
   centralNotifyEmail:     z.string().email().nullable().optional(),
   notifyAgentOnComment:   z.boolean().optional(),
   notifyCreatorOnComment: z.boolean().optional(),
+  slackWebhookUrl:        z.string().url().nullable().optional(),
+  teamsWebhookUrl:        z.string().url().nullable().optional(),
+  slaEnabled:             z.boolean().optional(),
+  slaLowHours:            z.number().int().min(1).optional(),
+  slaMediumHours:         z.number().int().min(1).optional(),
+  slaHighHours:           z.number().int().min(1).optional(),
+  slaUrgentHours:         z.number().int().min(1).optional(),
 });
 
 async function ensureSettings() {

@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 import { TicketListClient } from "./TicketListClient";
 
 export default async function AdminTicketsPage({
@@ -11,7 +12,14 @@ export default async function AdminTicketsPage({
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const pageSize = 25;
 
+  const hdrs = await headers();
+  const agentId = hdrs.get("x-agent-id");
+  const agentRole = hdrs.get("x-agent-role");
+  // AGENT role: only show tickets assigned to them
+  const agentAssignedFilter = agentId && agentRole === "AGENT" ? { assignedToId: agentId } : {};
+
   const where = {
+    ...agentAssignedFilter,
     ...(sp.status   ? { status:   sp.status as never }   : {}),
     ...(sp.priority ? { priority: sp.priority as never } : {}),
     ...(sp.tag      ? { tags: { some: { tag: { name: sp.tag } } } } : {}),

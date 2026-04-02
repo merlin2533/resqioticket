@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TiptapEditor } from "@/components/editor/TiptapEditor";
+import { sanitizeContent } from "@/lib/sanitize";
 
 const statusOptions = [
   { value: "OPEN",        label: "Offen",          cls: "bg-blue-100 text-blue-700" },
@@ -54,6 +55,11 @@ function getApiKey() {
   return "";
 }
 
+type CustomField = {
+  id: string; name: string; label: string; type: string;
+  options: string[] | null; required: boolean; isActive: boolean; sortOrder: number;
+};
+
 export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const router = useRouter();
   const [status, setStatus]     = useState(ticket.status);
@@ -67,7 +73,63 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const [activeTab, setActiveTab] = useState<"comments" | "attachments" | "relations" | "audit">("comments");
   const [linkTicketNum, setLinkTicketNum] = useState("");
   const [linkType, setLinkType] = useState("linked");
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [savingCustomField, setSavingCustomField] = useState<string | null>(null);
+  const [watchers, setWatchers] = useState<{ id: string; agentId: string; agent: { id: string; name: string; email: string } }[]>([]);
   void API_KEY;
+
+  useEffect(() => {
+    const apiKey = getApiKey();
+    Promise.all([
+      fetch("/api/custom-fields", { headers: { "x-api-key": apiKey } }).then(r => r.json()),
+      fetch(`/api/tickets/${ticket.id}/custom-fields`, { headers: { "x-api-key": apiKey } }).then(r => r.json()),
+    ]).then(([fieldsRes, valuesRes]) => {
+      const activeFields: CustomField[] = (fieldsRes.data ?? []).filter((f: CustomField) => f.isActive);
+      setCustomFields(activeFields);
+      const valMap: Record<string, string> = {};
+      for (const v of (valuesRes.data ?? [])) {
+        valMap[v.fieldId] = v.value;
+      }
+      setCustomValues(valMap);
+    }).catch(() => {});
+    fetch(`/api/tickets/${ticket.id}/watchers`, { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(res => setWatchers(res.data ?? [])).catch(() => {});
+  }, [ticket.id]);
+
+  async function handleCustomFieldChange(fieldId: string, value: string) {
+    setCustomValues(prev => ({ ...prev, [fieldId]: value }));
+    setSavingCustomField(fieldId);
+    const apiKey = getApiKey();
+    await fetch(`/api/tickets/${ticket.id}/custom-fields`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ fieldId, value }),
+    });
+    setSavingCustomField(null);
+  }
+
+  async function handleAddWatcher(agentId: string) {
+    if (!agentId) return;
+    const apiKey = getApiKey();
+    const res = await fetch(`/api/tickets/${ticket.id}/watchers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ agentId }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setWatchers(prev => [...prev, data.data]);
+    }
+  }
+
+  async function handleRemoveWatcher(agentId: string) {
+    const apiKey = getApiKey();
+    await fetch(`/api/tickets/${ticket.id}/watchers?agentId=${agentId}`, {
+      method: "DELETE",
+      headers: { "x-api-key": apiKey },
+    });
+    setWatchers(prev => prev.filter(w => w.agentId !== agentId));
+  }
 
   async function patchTicket(data: object) {
     setSaving(true);
@@ -205,7 +267,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
           {/* Description */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 mb-3">Beschreibung</h3>
-            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: ticket.description }} />
+            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeContent(ticket.description) }} />
           </div>
 
           {/* Tabs */}
@@ -240,7 +302,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                         {c.authorType === "SYSTEM" && <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">System</span>}
                         <span className="text-xs text-gray-400 ml-auto">{new Date(c.createdAt).toLocaleString("de-DE")}</span>
                       </div>
-                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: c.body }} />
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeContent(c.body) }} />
                     </div>
                   ))}
 
@@ -312,6 +374,50 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                     </select>
                     <button onClick={handleLinkTicket} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Verlinken</button>
                   </div>
+
+                  {/* Merge section */}
+                  <div className="border-t border-gray-100 pt-4">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tickets zusammenführen</h4>
+                    <p className="text-xs text-gray-400 mb-2">
+                      Verknüpft dieses Ticket als &bdquo;Duplikat von&ldquo; dem Ziel-Ticket und setzt den Status auf Geschlossen.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={linkTicketNum}
+                        onChange={(e) => setLinkTicketNum(e.target.value)}
+                        placeholder="Ziel-Ticket-Nummer"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!linkTicketNum) return;
+                          const apiKey = getApiKey();
+                          const res = await fetch(`/api/tickets?search=${linkTicketNum}`, { headers: { "x-api-key": apiKey } });
+                          const data = await res.json();
+                          const found = data.data?.[0];
+                          if (!found) { alert("Ticket nicht gefunden"); return; }
+                          // Create merged_into relation
+                          await fetch(`/api/tickets/${ticket.id}/relations`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+                            body: JSON.stringify({ relatedId: found.id, relationType: "duplicate_of" }),
+                          });
+                          // Close this ticket
+                          await fetch(`/api/tickets/${ticket.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+                            body: JSON.stringify({ status: "CLOSED" }),
+                          });
+                          setLinkTicketNum("");
+                          router.refresh();
+                        }}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600"
+                      >
+                        Zusammenführen
+                      </button>
+                    </div>
+                  </div>
+
                   {[...ticket.sourceRelations, ...ticket.targetRelations].length === 0 && <p className="text-sm text-gray-400 text-center py-4">Keine Verlinkungen</p>}
                   {ticket.sourceRelations.map((r) => r.related && (
                     <div key={r.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
@@ -407,6 +513,87 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
               </select>
             )}
           </div>
+
+          {/* Watchers */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Beobachter</h3>
+            <div className="space-y-1.5 mb-3">
+              {watchers.length === 0 && <p className="text-xs text-gray-400">Keine Beobachter</p>}
+              {watchers.map((w) => (
+                <div key={w.agentId} className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">{w.agent.name.charAt(0)}</div>
+                  <span className="text-xs text-gray-700 flex-1">{w.agent.name}</span>
+                  <button onClick={() => handleRemoveWatcher(w.agentId)} className="text-xs text-gray-400 hover:text-red-500">×</button>
+                </div>
+              ))}
+            </div>
+            {agents.filter(a => !watchers.some(w => w.agentId === a.id)).length > 0 && (
+              <select
+                onChange={(e) => { if (e.target.value) handleAddWatcher(e.target.value); e.target.value = ""; }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Beobachter hinzufügen…</option>
+                {agents.filter(a => !watchers.some(w => w.agentId === a.id)).map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Eigene Felder</h3>
+              <div className="space-y-3">
+                {customFields.map(field => (
+                  <div key={field.id}>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {field.label}{field.required && <span className="ml-1 text-red-500">*</span>}
+                      {savingCustomField === field.id && <span className="ml-1 text-gray-400 font-normal">…</span>}
+                    </label>
+                    {field.type === "text" && (
+                      <input
+                        type="text"
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => setCustomValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        onBlur={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                    {field.type === "number" && (
+                      <input
+                        type="number"
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => setCustomValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                        onBlur={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                    {field.type === "boolean" && (
+                      <button
+                        onClick={() => handleCustomFieldChange(field.id, customValues[field.id] === "true" ? "false" : "true")}
+                        className={`text-xs px-2 py-1 rounded-full font-medium ${customValues[field.id] === "true" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+                      >
+                        {customValues[field.id] === "true" ? "Ja" : "Nein"}
+                      </button>
+                    )}
+                    {field.type === "select" && (
+                      <select
+                        value={customValues[field.id] ?? ""}
+                        onChange={e => handleCustomFieldChange(field.id, e.target.value)}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">– Bitte wählen –</option>
+                        {(field.options ?? []).map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Meta */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 text-xs text-gray-500 space-y-1.5">

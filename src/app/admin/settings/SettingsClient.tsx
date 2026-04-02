@@ -12,6 +12,13 @@ type Settings = {
   centralNotifyEmail: string | null;
   notifyAgentOnComment: boolean;
   notifyCreatorOnComment: boolean;
+  slackWebhookUrl: string | null;
+  teamsWebhookUrl: string | null;
+  slaEnabled: boolean;
+  slaLowHours: number;
+  slaMediumHours: number;
+  slaHighHours: number;
+  slaUrgentHours: number;
 };
 
 function getApiKey() {
@@ -39,7 +46,17 @@ function Toggle({ value, onChange, label, description }: { value: boolean; onCha
 
 export function SettingsClient({ settings }: { settings: Settings }) {
   const router = useRouter();
-  const [form, setForm] = useState({ ...settings, centralNotifyEmail: settings.centralNotifyEmail ?? "" });
+  const [form, setForm] = useState({
+    ...settings,
+    centralNotifyEmail: settings.centralNotifyEmail ?? "",
+    slackWebhookUrl: settings.slackWebhookUrl ?? "",
+    teamsWebhookUrl: settings.teamsWebhookUrl ?? "",
+    slaEnabled: settings.slaEnabled ?? false,
+    slaLowHours: settings.slaLowHours ?? 72,
+    slaMediumHours: settings.slaMediumHours ?? 48,
+    slaHighHours: settings.slaHighHours ?? 24,
+    slaUrgentHours: settings.slaUrgentHours ?? 4,
+  });
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -59,6 +76,13 @@ export function SettingsClient({ settings }: { settings: Settings }) {
       body: JSON.stringify({
         ...form,
         centralNotifyEmail: form.centralNotifyEmail || null,
+        slackWebhookUrl: form.slackWebhookUrl || null,
+        teamsWebhookUrl: form.teamsWebhookUrl || null,
+        slaEnabled: form.slaEnabled,
+        slaLowHours: form.slaLowHours,
+        slaMediumHours: form.slaMediumHours,
+        slaHighHours: form.slaHighHours,
+        slaUrgentHours: form.slaUrgentHours,
       }),
     });
     setSaving(false);
@@ -126,6 +150,82 @@ export function SettingsClient({ settings }: { settings: Settings }) {
                 onChange={(e) => set("emailFrom", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+          </div>
+        </section>
+
+        {/* Webhook-Integrationen */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-1">Webhook-Integrationen</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Benachrichtigungen an Slack und Microsoft Teams senden bei: neues Ticket, Statusänderung, neuer öffentlicher Kommentar.
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Slack Incoming Webhook URL
+              </label>
+              <input
+                type="url"
+                value={form.slackWebhookUrl}
+                onChange={(e) => set("slackWebhookUrl", e.target.value)}
+                placeholder="https://hooks.slack.com/services/… (leer = deaktiviert)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Incoming Webhook in Slack unter <em>Apps → Incoming WebHooks</em> erstellen.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Microsoft Teams Webhook URL
+              </label>
+              <input
+                type="url"
+                value={form.teamsWebhookUrl}
+                onChange={(e) => set("teamsWebhookUrl", e.target.value)}
+                placeholder="https://… .webhook.office.com/… (leer = deaktiviert)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Incoming Webhook im Teams-Kanal unter <em>Connectors → Incoming Webhook</em> erstellen.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* SLA-Verwaltung */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-1">SLA-Verwaltung</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Service Level Agreements – maximale Bearbeitungszeit pro Priorität. Der Cron-Job markiert überschrittene Tickets automatisch.
+          </p>
+          <div className="space-y-5">
+            <Toggle
+              value={form.slaEnabled}
+              onChange={(v) => set("slaEnabled", v)}
+              label="SLA-Überwachung aktiviert"
+              description="Setzt Deadlines auf neue Tickets und markiert sie bei Überschreitung."
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Niedrig (Stunden)</label>
+                <input type="number" min={1} value={form.slaLowHours} onChange={(e) => set("slaLowHours", parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Mittel (Stunden)</label>
+                <input type="number" min={1} value={form.slaMediumHours} onChange={(e) => set("slaMediumHours", parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hoch (Stunden)</label>
+                <input type="number" min={1} value={form.slaHighHours} onChange={(e) => set("slaHighHours", parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Dringend (Stunden)</label>
+                <input type="number" min={1} value={form.slaUrgentHours} onChange={(e) => set("slaUrgentHours", parseInt(e.target.value, 10))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
           </div>
         </section>

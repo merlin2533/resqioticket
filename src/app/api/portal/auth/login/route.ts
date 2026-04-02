@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createSessionToken } from "@/lib/customer-auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -9,6 +10,23 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`portal-login:${ip}`, 10, 15 * 60 * 1000);
+  if (!rl.success) {
+    const retryAfterSecs = Math.ceil((rl.resetAt.getTime() - Date.now()) / 1000);
+    return NextResponse.json(
+      { error: "Zu viele Anmeldeversuche. Bitte später erneut versuchen." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfterSecs),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": rl.resetAt.toISOString(),
+        },
+      }
+    );
+  }
+
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 

@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum TicketStatus {
@@ -35,32 +34,41 @@ enum CommentAuthorType {
 }
 
 model Agent {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String
-  role            AgentRole @default(AGENT)
-  isActive        Boolean   @default(true)
-  reminderEnabled Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String
+  role                 AgentRole @default(AGENT)
+  password             String?
+  isActive             Boolean   @default(true)
+  reminderEnabled      Boolean   @default(true)
+  notifyOnNewTicket    Boolean   @default(true)
+  notifyOnComment      Boolean   @default(true)
+  notifyOnStatusChange Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   assignedTickets Ticket[]
   comments        Comment[]
   auditLogs       AuditLog[]
+  watchedTickets  TicketWatcher[]
 
   @@map("agents")
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String
+  password             String
+  isActive             Boolean   @default(true)
+  notifyOnComment      Boolean   @default(true)
+  notifyOnStatusChange Boolean   @default(true)
+  resetToken           String?   @unique
+  resetTokenExpiry     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  tickets   Ticket[]
+  tickets Ticket[]
 
   @@map("customers")
 }
@@ -84,13 +92,17 @@ model Ticket {
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
   closedAt      DateTime?
+  slaDeadline   DateTime?
+  slaBreached   Boolean        @default(false)
 
-  comments    Comment[]
-  tags        TicketTag[]
-  attachments Attachment[]
-  auditLogs   AuditLog[]
-  sourceRelations TicketRelation[] @relation("SourceTicket")
-  targetRelations TicketRelation[] @relation("TargetTicket")
+  comments          Comment[]
+  tags              TicketTag[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+  sourceRelations   TicketRelation[] @relation("SourceTicket")
+  targetRelations   TicketRelation[] @relation("TargetTicket")
+  customFieldValues TicketCustomFieldValue[]
+  watchers          TicketWatcher[]
 
   @@index([status])
   @@index([priority])
@@ -119,12 +131,12 @@ model Comment {
 }
 
 model Tag {
-  id        String      @id @default(cuid())
-  name      String      @unique
-  color     String      @default("#6366f1")
-  createdAt DateTime    @default(now())
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String    @default("#6366f1")
+  createdAt DateTime  @default(now())
 
-  tickets   TicketTag[]
+  tickets TicketTag[]
 
   @@map("tags")
 }
@@ -220,6 +232,19 @@ model TicketRelation {
   @@map("ticket_relations")
 }
 
+model TicketWatcher {
+  id       String @id @default(cuid())
+  ticketId String
+  agentId  String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agent    Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([ticketId, agentId])
+  @@index([ticketId])
+  @@map("ticket_watchers")
+}
+
 model Settings {
   id                     String  @id @default("default")
   reminderEnabled        Boolean @default(true)
@@ -229,8 +254,45 @@ model Settings {
   centralNotifyEmail     String?
   notifyAgentOnComment   Boolean @default(true)
   notifyCreatorOnComment Boolean @default(true)
+  slackWebhookUrl        String?
+  teamsWebhookUrl        String?
+  slaLowHours            Int     @default(72)
+  slaMediumHours         Int     @default(48)
+  slaHighHours           Int     @default(24)
+  slaUrgentHours         Int     @default(4)
+  slaEnabled             Boolean @default(false)
 
   @@map("settings")
+}
+
+model CustomField {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  label     String
+  type      String   // text | number | boolean | select
+  options   Json?
+  required  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  values TicketCustomFieldValue[]
+
+  @@map("custom_fields")
+}
+
+model TicketCustomFieldValue {
+  id       String      @id @default(cuid())
+  ticketId String
+  fieldId  String
+  value    String
+  ticket   Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  field    CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, fieldId])
+  @@index([ticketId])
+  @@map("ticket_custom_field_values")
 }
 
 model EmailTemplate {

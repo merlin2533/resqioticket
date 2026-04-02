@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/auth";
 import { updateAgentSchema } from "@/lib/validators";
+import { hashPassword } from "@/lib/customer-auth";
 
 export async function GET(
   request: NextRequest,
@@ -60,9 +61,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  const updateData: Record<string, unknown> = { ...parsed.data };
+  if (parsed.data.password) {
+    updateData.password = await hashPassword(parsed.data.password);
+  } else {
+    delete updateData.password; // don't update password if not provided
+  }
+
   const agent = await prisma.agent.update({
     where: { id },
-    data: parsed.data,
+    data: updateData,
   });
 
   return NextResponse.json({ data: agent });
