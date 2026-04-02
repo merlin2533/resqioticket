@@ -19,7 +19,10 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   async function handleLogout() {
-    await fetch("/api/admin/auth", { method: "DELETE" });
+    await Promise.all([
+      fetch("/api/admin/auth", { method: "DELETE" }),
+      fetch("/api/admin/agent-auth", { method: "DELETE" }),
+    ]);
     window.location.href = "/admin/login";
   }
 
