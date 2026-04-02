@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCustomerFromRequest } from "@/lib/customer-auth";
 import { prisma } from "@/lib/prisma";
 import { LogoutButton } from "./LogoutButton";
+import { NotificationPreferencesCard } from "./NotificationPreferencesCard";
 
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Offen",
@@ -25,6 +26,11 @@ export const dynamic = "force-dynamic";
 export default async function PortalDashboardPage() {
   const customer = await getCustomerFromRequest();
   if (!customer) redirect("/portal/login");
+
+  const customerPrefs = await prisma.customer.findUnique({
+    where: { id: customer.id },
+    select: { notifyOnComment: true, notifyOnStatusChange: true },
+  });
 
   const tickets = await prisma.ticket.findMany({
     where: { customerId: customer.id },
@@ -107,6 +113,12 @@ export default async function PortalDashboardPage() {
             </table>
           </div>
         )}
+        <div className="mt-8">
+          <NotificationPreferencesCard
+            initialNotifyOnComment={customerPrefs?.notifyOnComment ?? true}
+            initialNotifyOnStatusChange={customerPrefs?.notifyOnStatusChange ?? true}
+          />
+        </div>
       </main>
     </div>
   );
