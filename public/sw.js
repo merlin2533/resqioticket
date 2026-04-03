@@ -64,3 +64,47 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 });
+
+// ── Push Notifications ──────────────────────────────────────────────────────
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "ResQio", body: event.data.text() };
+  }
+
+  const options = {
+    body: payload.body || "",
+    icon: "/icons/icon-192x192.png",
+    badge: "/icons/icon-192x192.png",
+    tag: payload.tag || "resqio-default",
+    renotify: true,
+    data: { url: payload.url || "/admin" },
+    vibrate: [200, 100, 200],
+  };
+
+  event.waitUntil(self.registration.showNotification(payload.title || "ResQio Ticket", options));
+});
+
+// Click on notification → open the relevant page
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || "/admin";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing tab if possible
+      for (const client of windowClients) {
+        if (client.url.includes(url) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new tab
+      return clients.openWindow(url);
+    })
+  );
+});

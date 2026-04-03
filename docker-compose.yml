@@ -26,7 +26,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/resqioticket
-      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       API_KEY: ${API_KEY:-default-dev-api-key}
       APP_URL: ${APP_URL:-http://localhost:3000}
       EMAIL_FROM: ${EMAIL_FROM:-support@yourdomain.com}
@@ -34,6 +34,11 @@ services:
       REMINDER_INTERVAL_HOURS: ${REMINDER_INTERVAL_HOURS:-24}
       REMINDER_ESCALATION_DAYS: ${REMINDER_ESCALATION_DAYS:-3}
       INBOUND_WEBHOOK_SECRET: ${INBOUND_WEBHOOK_SECRET:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-Admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin}
+      AGENT_SESSION_SECRET: ${AGENT_SESSION_SECRET:-default-session-secret}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+      GOOGLE_DRIVE_FOLDER_ID: ${GOOGLE_DRIVE_FOLDER_ID:-}
 
 volumes:
   postgres_data:

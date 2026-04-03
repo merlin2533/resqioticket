@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
   const { username, password } = parsed.data;
 
-  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+  if (username.toLowerCase() !== ADMIN_USERNAME.toLowerCase() || password !== ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Ungültiger Benutzername oder Passwort" }, { status: 401 });
   }
 
