@@ -7,8 +7,11 @@ import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
 import { fireWebhooks } from "@/lib/webhooks";
 import { emitTicketEvent } from "@/lib/sse-events";
+import { sendPushToWatchers } from "@/lib/web-push";
 import { z } from "zod";
 import { log } from "@/lib/logger";
+
+const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
 const commentWithNotifySchema = createCommentSchema.extend({
   notifyCreator: z.boolean().optional(),
@@ -80,6 +83,22 @@ export async function POST(
 
   // Automation trigger
   runAutomations("comment_added", { id: ticket.id, subject: ticket.subject, description: ticket.description, email: ticket.email, name: ticket.name, priority: ticket.priority, status: ticket.status }).catch(() => {});
+
+  // Push notification to all watchers for new public comments
+  if (!parsed.data.isInternal) {
+    const plainBody = parsed.data.body.replace(/<[^>]+>/g, "").slice(0, 120);
+    sendPushToWatchers(
+      id,
+      {
+        title: `Ticket #${ticket.number} – Neuer Kommentar`,
+        body: `${parsed.data.authorName}: ${plainBody}`,
+        url: `${APP_URL}/admin/tickets/${id}`,
+        tag: `ticket-${id}-comment`,
+      },
+      // Exclude the comment author if they are an agent
+      parsed.data.authorType === "AGENT" ? parsed.data.authorId ?? undefined : undefined
+    ).catch(() => {});
+  }
 
   if (!parsed.data.isInternal) {
     emitTicketEvent({

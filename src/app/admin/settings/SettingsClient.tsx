@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PushNotificationToggle } from "@/components/pwa/PushNotificationToggle";
 
 type Settings = {
   id: string;
@@ -44,7 +45,7 @@ function Toggle({ value, onChange, label, description }: { value: boolean; onCha
   );
 }
 
-export function SettingsClient({ settings }: { settings: Settings }) {
+export function SettingsClient({ settings, agentId }: { settings: Settings; agentId: string | null }) {
   const router = useRouter();
   const [form, setForm] = useState({
     ...settings,
@@ -274,6 +275,18 @@ export function SettingsClient({ settings }: { settings: Settings }) {
           {saved && <span className="text-sm text-green-600 font-medium">✓ Gespeichert</span>}
         </div>
       </form>
+
+      {/* Push-Benachrichtigungen */}
+      {agentId && (
+        <section className="mt-8 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="font-semibold text-gray-900 mb-1">Push-Benachrichtigungen</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Erhalte Benachrichtigungen direkt auf deinem Handy, wenn sich an beobachteten Tickets etwas aendert.
+            Du wirst automatisch Beobachter bei Tickets, die dir zugewiesen werden.
+          </p>
+          <PushNotificationToggle agentId={agentId} apiKey={getApiKey()} />
+        </section>
+      )}
 
       {/* Template seeder */}
       <section className="mt-8 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
