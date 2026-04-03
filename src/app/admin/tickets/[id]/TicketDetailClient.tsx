@@ -11,6 +11,7 @@ const statusOptions = [
   { value: "WAITING",     label: "Wartend",        cls: "bg-orange-100 text-orange-700" },
   { value: "RESOLVED",    label: "Geloest",        cls: "bg-green-100 text-green-700" },
   { value: "CLOSED",      label: "Geschlossen",    cls: "bg-gray-100 text-gray-600" },
+  { value: "ARCHIVED",    label: "Archiviert",     cls: "bg-purple-100 text-purple-700" },
 ];
 
 const priorityOptions = [
@@ -31,6 +32,7 @@ type Ticket = {
   id: string; number: number; subject: string; description: string;
   status: string; priority: string; email: string; name: string;
   externalToken: string; assignedToId: string | null; assignedTo: Agent | null;
+  projectId: string | null;
   createdAt: Date; updatedAt: Date; resolvedAt: Date | null;
   comments: Comment[];
   tags: { tag: Tag }[];
@@ -65,6 +67,8 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const [status, setStatus]     = useState(ticket.status);
   const [priority, setPriority] = useState(ticket.priority);
   const [assignedToId, setAssigned] = useState(ticket.assignedToId ?? "");
+  const [projectId, setProjectId] = useState(ticket.projectId ?? "");
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving]     = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentInternal, setCommentInternal] = useState(false);
@@ -94,6 +98,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
       setCustomValues(valMap);
     }).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/watchers`, { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(res => setWatchers(res.data ?? [])).catch(() => {});
+    fetch("/api/projects", { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(d => setProjects(d.data ?? [])).catch(() => {});
   }, [ticket.id]);
 
   async function handleCustomFieldChange(fieldId: string, value: string) {
@@ -156,6 +161,11 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   async function handleAssignChange(v: string) {
     setAssigned(v);
     await patchTicket({ assignedToId: v || null });
+  }
+
+  async function handleProjectChange(v: string) {
+    setProjectId(v);
+    await patchTicket({ projectId: v || null });
   }
 
   async function handleAddTag(tagId: string) {
@@ -489,6 +499,16 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
               <option value="">– Nicht zugewiesen –</option>
               {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+
+          {/* Project */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Projekt</h3>
+            <select value={projectId} onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+              <option value="">– Kein Projekt –</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 

@@ -13,6 +13,7 @@ enum TicketStatus {
   WAITING
   RESOLVED
   CLOSED
+  ARCHIVED
 }
 
 enum TicketPriority {
@@ -69,9 +70,35 @@ model Customer {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  tickets Ticket[]
+  tickets  Ticket[]
+  projects ProjectCustomer[]
 
   @@map("customers")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tickets   Ticket[]
+  customers ProjectCustomer[]
+
+  @@map("projects")
+}
+
+model ProjectCustomer {
+  projectId  String
+  customerId String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([projectId, customerId])
+  @@map("project_customers")
 }
 
 model Ticket {
@@ -89,6 +116,8 @@ model Ticket {
   assignedTo    Agent?         @relation(fields: [assignedToId], references: [id])
   customerId    String?
   customer      Customer?      @relation(fields: [customerId], references: [id])
+  projectId     String?
+  project       Project?       @relation(fields: [projectId], references: [id])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
@@ -110,6 +139,7 @@ model Ticket {
   @@index([email])
   @@index([assignedToId])
   @@index([customerId])
+  @@index([projectId])
   @@index([createdAt])
   @@map("tickets")
 }

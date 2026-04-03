@@ -7,14 +7,17 @@ export const createTicketSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(200),
   metadata: z.any().optional(),
+  customerId: z.string().optional(),
+  projectId: z.string().optional(),
 });
 
 export const updateTicketSchema = z.object({
   subject: z.string().min(1).max(500).optional(),
   description: z.string().min(1).optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED"]).optional(),
+  status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED", "ARCHIVED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   assignedToId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 export const createCommentSchema = z.object({
@@ -44,7 +47,7 @@ export const updateAgentSchema = z.object({
 });
 
 export const ticketQuerySchema = z.object({
-  status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED"]).optional(),
+  status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED", "ARCHIVED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   assignedTo: z.string().optional(),
   email: z.string().optional(),

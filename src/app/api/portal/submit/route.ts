@@ -14,6 +14,7 @@ const schema = z.object({
   subject: z.string().min(1).max(255),
   description: z.string().min(1),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().default("MEDIUM"),
+  projectId: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       email: customer.email,
       name: customer.name,
       customerId: customer.id,
+      ...(parsed.data.projectId ? { projectId: parsed.data.projectId } : {}),
     },
   });
 
