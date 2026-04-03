@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/session-token";
-import { verifyAgentToken } from "@/lib/agent-session";
+import { verifyAgentToken, verifyAdminToken } from "@/lib/agent-session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const apiKey = process.env.API_KEY;
 
   // Protect all /admin routes except login pages
   if (
@@ -14,8 +13,8 @@ export async function middleware(request: NextRequest) {
   ) {
     const adminSession = request.cookies.get("admin_session")?.value;
 
-    // Accept API key session (superadmin)
-    if (adminSession && apiKey && adminSession === apiKey) {
+    // Accept admin session token (superadmin)
+    if (adminSession && (await verifyAdminToken(adminSession))) {
       return NextResponse.next();
     }
 
@@ -68,7 +67,7 @@ export async function middleware(request: NextRequest) {
 
     // Verify admin_session cookie
     const adminSession = request.cookies.get("admin_session")?.value;
-    if (adminSession && apiKey && adminSession === apiKey) {
+    if (adminSession && (await verifyAdminToken(adminSession))) {
       requestHeaders.set("x-agent-verified", "1");
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
