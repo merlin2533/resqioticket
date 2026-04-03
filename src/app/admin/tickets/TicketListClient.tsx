@@ -11,12 +11,20 @@ function getApiKey() {
   return "";
 }
 
+const typeConfig: Record<string, { label: string; cls: string }> = {
+  INCIDENT:        { label: "Incident",        cls: "bg-red-50 text-red-700" },
+  SERVICE_REQUEST: { label: "Service Request", cls: "bg-blue-50 text-blue-700" },
+  CHANGE_REQUEST:  { label: "Change Request",  cls: "bg-purple-50 text-purple-700" },
+  PROBLEM:         { label: "Problem",         cls: "bg-orange-50 text-orange-700" },
+};
+
 const statusConfig: Record<string, { label: string; cls: string }> = {
   OPEN:        { label: "Offen",          cls: "bg-blue-100 text-blue-700" },
   IN_PROGRESS: { label: "In Bearbeitung", cls: "bg-yellow-100 text-yellow-700" },
   WAITING:     { label: "Wartend",        cls: "bg-orange-100 text-orange-700" },
   RESOLVED:    { label: "Geloest",        cls: "bg-green-100 text-green-700" },
   CLOSED:      { label: "Geschlossen",    cls: "bg-gray-100 text-gray-600" },
+  ARCHIVED:    { label: "Archiviert",    cls: "bg-purple-100 text-purple-700" },
 };
 
 const priorityConfig: Record<string, { label: string; cls: string }> = {
@@ -28,7 +36,6 @@ const priorityConfig: Record<string, { label: string; cls: string }> = {
 
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string };
-type Project = { id: string; name: string; color: string };
 type Ticket = {
   id: string; number: number; subject: string; status: string; priority: string;
   email: string; name: string; createdAt: Date; assignedTo: Agent | null;
@@ -36,7 +43,6 @@ type Ticket = {
   _count: { comments: number; attachments: number };
   slaBreached: boolean;
   slaDeadline: Date | null;
-  project: Project | null;
 };
 
 interface Props {
@@ -46,8 +52,8 @@ interface Props {
   pageSize: number;
   tags: Tag[];
   agents: Agent[];
-  projects: Project[];
-  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string };
+  projects: { id: string; name: string }[];
+  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string; type?: string };
 }
 
 export function TicketListClient({ tickets, total, page, pageSize, tags, projects, filters }: Props) {
@@ -176,6 +182,16 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
 
+        {/* Type filter */}
+        <select
+          value={filters.type ?? ""}
+          onChange={(e) => router.push(buildUrl({ type: e.target.value || undefined, page: "1" }))}
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Alle Typen</option>
+          {Object.entries(typeConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+
         <button
           onClick={handleExport}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1.5"
@@ -183,7 +199,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
           ↓ CSV
         </button>
 
-        {(filters.status || filters.priority || filters.q || filters.tag || filters.project) && (
+        {(filters.status || filters.priority || filters.q || filters.tag || filters.project || filters.type) && (
           <button onClick={() => router.push("/admin/tickets")} className="text-sm text-gray-500 hover:text-red-500">✕ Reset</button>
         )}
       </div>
@@ -206,7 +222,6 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-32">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-20">Prio</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-32">Zugewiesen</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 w-28">Projekt</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-36">Erstellt</th>
             </tr>
           </thead>
@@ -246,20 +261,12 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${sc.cls}`}>{sc.label}</span></td>
                   <td className="px-4 py-3"><span className={`text-xs font-medium ${pc.cls}`}>● {pc.label}</span></td>
                   <td className="px-4 py-3 text-gray-500">{t.assignedTo?.name ?? <span className="text-gray-300">–</span>}</td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {t.project ? (
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.project.color }} />
-                        {t.project.name}
-                      </span>
-                    ) : <span className="text-gray-300">–</span>}
-                  </td>
                   <td className="px-4 py-3 text-gray-400">{new Date(t.createdAt).toLocaleDateString("de-DE")}</td>
                 </tr>
               );
             })}
             {tickets.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
             )}
           </tbody>
         </table>
@@ -286,12 +293,6 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
                 {t._count.comments > 0 && <span className="text-xs text-gray-400">💬{t._count.comments}</span>}
                 {t.slaBreached && <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">SLA</span>}
               </div>
-              {t.project && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.project.color }} />
-                  <span className="text-xs text-gray-500">{t.project.name}</span>
-                </div>
-              )}
               <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
                 <span>{t.name}</span>
                 <span>{t.assignedTo?.name ?? "–"} · {new Date(t.createdAt).toLocaleDateString("de-DE")}</span>
@@ -315,6 +316,13 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
         </div>
       )}
 
+      {/* Mobile FAB */}
+      {selectedIds.size === 0 && (
+        <Link href="/admin/tickets/new" className="md:hidden fixed bottom-4 right-4 z-30 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-95 transition-transform">
+          +
+        </Link>
+      )}
+
       {selectedIds.size > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex flex-wrap items-center gap-2 md:gap-3 z-40 max-w-[calc(100vw-2rem)]">
           <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
@@ -328,6 +336,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
             <option value="WAITING">Wartend</option>
             <option value="RESOLVED">Gelöst</option>
             <option value="CLOSED">Geschlossen</option>
+            <option value="ARCHIVED">Archiviert</option>
           </select>
           <select onChange={e => { if (e.target.value) applyBulkAction("set_priority", e.target.value); e.target.value = ""; }}
             className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-600 cursor-pointer">

@@ -6,7 +6,7 @@ import { TicketListClient } from "./TicketListClient";
 export default async function AdminTicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; priority?: string; q?: string; page?: string; tag?: string; project?: string }>;
+  searchParams: Promise<{ status?: string; priority?: string; q?: string; page?: string; tag?: string; project?: string; type?: string }>;
 }) {
   const sp = await searchParams;
   const page = Math.max(1, parseInt(sp.page ?? "1", 10));
@@ -20,10 +20,11 @@ export default async function AdminTicketsPage({
 
   const where = {
     ...agentAssignedFilter,
-    ...(sp.status   ? { status:   sp.status as never }   : {}),
+    ...(sp.status ? { status: sp.status as never } : { status: { not: "ARCHIVED" as never } }),
     ...(sp.priority ? { priority: sp.priority as never } : {}),
     ...(sp.tag      ? { tags: { some: { tag: { name: sp.tag } } } } : {}),
     ...(sp.project  ? { projectId: sp.project } : {}),
+    ...(sp.type     ? { type: sp.type as never } : {}),
     ...(sp.q        ? { OR: [
       { subject:     { contains: sp.q, mode: "insensitive" as const } },
       { description: { contains: sp.q, mode: "insensitive" as const } },
@@ -41,13 +42,12 @@ export default async function AdminTicketsPage({
         assignedTo: { select: { id: true, name: true } },
         tags: { include: { tag: true } },
         _count: { select: { comments: true, attachments: true } },
-        project: { select: { id: true, name: true, color: true } },
       },
     }),
     prisma.ticket.count({ where }),
     prisma.tag.findMany({ orderBy: { name: "asc" } }),
     prisma.agent.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
-    prisma.project.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.project.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -59,7 +59,7 @@ export default async function AdminTicketsPage({
       tags={tags}
       agents={agents}
       projects={projects}
-      filters={{ status: sp.status, priority: sp.priority, q: sp.q, tag: sp.tag, project: sp.project }}
+      filters={{ status: sp.status, priority: sp.priority, q: sp.q, tag: sp.tag, project: sp.project, type: sp.type }}
     />
   );
 }

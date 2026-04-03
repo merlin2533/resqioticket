@@ -9,11 +9,14 @@ import { fireWebhooks } from "@/lib/webhooks";
 import { createAuditLog } from "@/lib/audit";
 import { setTicketSla } from "@/lib/sla";
 import { log } from "@/lib/logger";
+import { detectPriority } from "@/lib/auto-priority";
 
 const schema = z.object({
   subject: z.string().min(1).max(255),
   description: z.string().min(1),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().default("MEDIUM"),
+  type: z.enum(["INCIDENT", "SERVICE_REQUEST", "CHANGE_REQUEST", "PROBLEM"]).optional().default("INCIDENT"),
+  projectId: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,14 +29,23 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Eingabe" }, { status: 400 });
 
+  // Auto-detect priority if not explicitly set (default is MEDIUM)
+  const data = { ...parsed.data };
+  if (data.priority === "MEDIUM") {
+    const detected = detectPriority(data.subject, data.description);
+    if (detected) data.priority = detected;
+  }
+
   const ticket = await prisma.ticket.create({
     data: {
-      subject: parsed.data.subject,
-      description: parsed.data.description,
-      priority: parsed.data.priority,
+      subject: data.subject,
+      description: data.description,
+      priority: data.priority,
+      type: data.type,
       email: customer.email,
       name: customer.name,
       customerId: customer.id,
+      ...(data.projectId ? { projectId: data.projectId } : {}),
     },
   });
 

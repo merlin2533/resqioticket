@@ -5,10 +5,11 @@ import { ProjectsClient } from "./ProjectsClient";
 export default async function AdminProjectsPage() {
   const [projects, customers] = await Promise.all([
     prisma.project.findMany({
-      orderBy: { name: "asc" },
+      orderBy: { createdAt: "desc" },
       include: {
-        customer: { select: { id: true, name: true } },
-        _count: { select: { tickets: true } },
+        _count: {
+          select: { customers: true, tickets: true },
+        },
       },
     }),
     prisma.customer.findMany({
@@ -18,5 +19,5 @@ export default async function AdminProjectsPage() {
     }),
   ]);
 
-  return <ProjectsClient projects={projects} customers={customers} />;
+  return <ProjectsClient projects={projects} allCustomers={customers} />;
 }
