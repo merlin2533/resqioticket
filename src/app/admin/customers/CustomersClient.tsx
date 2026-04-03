@@ -60,9 +60,9 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Kunden</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 ml-8 md:ml-0">Kunden</h1>
         <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
           + Kunde anlegen
         </button>
@@ -72,7 +72,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
           <h3 className="font-semibold text-gray-900 mb-4">Neuer Kunde</h3>
           <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="Max Mustermann" />
@@ -100,6 +100,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
       )}
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -145,7 +146,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="Neues Passwort (mind. 6 Zeichen)"
-                          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 w-72"
+                          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 w-full sm:w-72"
                         />
                         <button onClick={() => handleResetPassword(c.id)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                           Speichern
@@ -162,6 +163,7 @@ export function CustomersClient({ customers }: { customers: Customer[] }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

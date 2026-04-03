@@ -115,9 +115,10 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Tickets <span className="text-gray-400 font-normal text-lg">({total})</span></h1>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 ml-8 md:ml-0">Tickets <span className="text-gray-400 font-normal text-base md:text-lg">({total})</span></h1>
+        <Link href="/admin/tickets/new" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shrink-0">+ Ticket</Link>
       </div>
 
       {/* Filters */}
@@ -175,7 +176,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -240,20 +241,54 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
             )}
           </tbody>
         </table>
+      </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-sm text-gray-500">Seite {page} von {totalPages}</span>
-            <div className="flex gap-2">
-              {page > 1 && <Link href={buildUrl({ page: String(page - 1) })} className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">← Zurück</Link>}
-              {page < totalPages && <Link href={buildUrl({ page: String(page + 1) })} className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Weiter →</Link>}
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {tickets.map((t) => {
+          const sc = statusConfig[t.status] ?? statusConfig.OPEN;
+          const pc = priorityConfig[t.priority] ?? priorityConfig.MEDIUM;
+          return (
+            <div key={t.id} onClick={() => router.push(`/admin/tickets/${t.id}`)} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 cursor-pointer active:bg-gray-50">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-mono text-gray-400">#{t.number}</span>
+                <span className={`text-xs font-medium ${pc.cls}`}>● {pc.label}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sc.cls} ml-auto`}>{sc.label}</span>
+              </div>
+              <p className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{t.subject}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {t.tags.slice(0, 2).map((tt) => (
+                  <span key={tt.tag.id} className="text-xs px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: tt.tag.color }}>{tt.tag.name}</span>
+                ))}
+                {t._count.attachments > 0 && <span className="text-xs text-gray-400">📎{t._count.attachments}</span>}
+                {t._count.comments > 0 && <span className="text-xs text-gray-400">💬{t._count.comments}</span>}
+                {t.slaBreached && <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">SLA</span>}
+              </div>
+              <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                <span>{t.name}</span>
+                <span>{t.assignedTo?.name ?? "–"} · {new Date(t.createdAt).toLocaleDateString("de-DE")}</span>
+              </div>
             </div>
-          </div>
+          );
+        })}
+        {tickets.length === 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">Keine Tickets gefunden</div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between mt-4">
+          <span className="text-sm text-gray-500">Seite {page} von {totalPages}</span>
+          <div className="flex gap-2">
+            {page > 1 && <Link href={buildUrl({ page: String(page - 1) })} className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">← Zurück</Link>}
+            {page < totalPages && <Link href={buildUrl({ page: String(page + 1) })} className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Weiter →</Link>}
+          </div>
+        </div>
+      )}
+
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 z-40">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex flex-wrap items-center gap-2 md:gap-3 z-40 max-w-[calc(100vw-2rem)]">
           <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
           <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-white">× Abwählen</button>
           <div className="h-4 w-px bg-gray-600" />

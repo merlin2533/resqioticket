@@ -238,17 +238,17 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   }
 
   return (
-    <div className="p-6 max-w-6xl">
+    <div className="p-4 md:p-6 max-w-6xl">
       {/* Header */}
       <div className="flex items-start gap-4 mb-6">
-        <div className="flex-1">
+        <div className="flex-1 ml-8 md:ml-0">
           <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
             <a href="/admin/tickets" className="hover:text-blue-600">Tickets</a>
             <span>/</span>
             <span>#{ticket.number}</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
-          <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm text-gray-500">
             <span>{ticket.name}</span>
             <span>·</span>
             <a href={`mailto:${ticket.email}`} className="hover:text-blue-600">{ticket.email}</a>
@@ -261,9 +261,9 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
         {saving && <span className="text-sm text-gray-400 animate-pulse">Speichern…</span>}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main content */}
-        <div className="col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4">
           {/* Description */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 mb-3">Beschreibung</h3>
@@ -272,14 +272,14 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
 
           {/* Tabs */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex border-b border-gray-200 bg-gray-50">
+            <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
               {(["comments", "attachments", "relations", "audit"] as const).map((tab) => {
                 const labels = { comments: `Kommentare (${ticket.comments.length})`, attachments: `Anhänge (${ticket.attachments.length})`, relations: "Verlinkungen", audit: "Verlauf" };
                 return (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab ? "bg-white text-blue-700 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-900"}`}
+                    className={`px-4 py-3 text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${activeTab === tab ? "bg-white text-blue-700 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-900"}`}
                   >
                     {labels[tab]}
                   </button>
@@ -315,7 +315,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                       ticketId={ticket.id}
                       apiKey={getApiKey()}
                     />
-                    <div className="flex items-center gap-3 mt-3">
+                    <div className="flex flex-wrap items-center gap-3 mt-3">
                       <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
                         <input type="checkbox" checked={commentInternal} onChange={(e) => setCommentInternal(e.target.checked)} className="rounded" />
                         Intern (nicht für Kunden sichtbar)
@@ -363,7 +363,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
               {/* Relations Tab */}
               {activeTab === "relations" && (
                 <div className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input value={linkTicketNum} onChange={(e) => setLinkTicketNum(e.target.value)} placeholder="Ticket-Nummer oder Betreff" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
                     <select value={linkType} onChange={(e) => setLinkType(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                       <option value="linked">Verlinkt</option>
@@ -381,7 +381,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                     <p className="text-xs text-gray-400 mb-2">
                       Verknüpft dieses Ticket als &bdquo;Duplikat von&ldquo; dem Ziel-Ticket und setzt den Status auf Geschlossen.
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         value={linkTicketNum}
                         onChange={(e) => setLinkTicketNum(e.target.value)}

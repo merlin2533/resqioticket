@@ -87,15 +87,15 @@ export default async function AdminDashboard() {
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+    <div className="p-4 md:p-6">
+      <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 ml-8 md:ml-0">Dashboard</h1>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4 mb-6 md:mb-8">
         {cards.map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <div className={`w-8 h-1 rounded-full ${c.color} mb-3`} />
-            <div className="text-2xl font-bold text-gray-900">{c.value}</div>
+          <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-3 md:p-4 shadow-sm">
+            <div className={`w-8 h-1 rounded-full ${c.color} mb-2 md:mb-3`} />
+            <div className="text-xl md:text-2xl font-bold text-gray-900">{c.value}</div>
             <div className="text-xs text-gray-500 mt-1">{c.label}</div>
           </div>
         ))}
@@ -103,7 +103,7 @@ export default async function AdminDashboard() {
 
       {/* Recent Tickets */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-4 md:px-5 py-3 md:py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Letzte Tickets</h2>
           <a href="/admin/tickets" className="text-sm text-blue-600 hover:underline">Alle ansehen →</a>
         </div>
@@ -114,19 +114,39 @@ export default async function AdminDashboard() {
               <a
                 key={t.id}
                 href={`/admin/tickets/${t.id}`}
-                className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors"
+                className="block px-4 md:px-5 py-3 hover:bg-gray-50 transition-colors"
               >
-                <span className="text-sm font-mono text-gray-400 w-12 shrink-0">#{t.number}</span>
-                <span className={`text-xs font-medium ${priorityConfig[t.priority]} shrink-0`}>●</span>
-                <span className="flex-1 text-sm font-medium text-gray-900 truncate">{t.subject}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  {t.tags.slice(0, 2).map((tt) => (
-                    <span key={tt.tagId} className="text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: tt.tag.color }}>
-                      {tt.tag.name}
-                    </span>
-                  ))}
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${sc.cls}`}>{sc.label}</span>
-                  <span className="text-xs text-gray-400">{t.assignedTo?.name ?? "–"}</span>
+                {/* Desktop row */}
+                <div className="hidden sm:flex items-center gap-4">
+                  <span className="text-sm font-mono text-gray-400 w-12 shrink-0">#{t.number}</span>
+                  <span className={`text-xs font-medium ${priorityConfig[t.priority]} shrink-0`}>●</span>
+                  <span className="flex-1 text-sm font-medium text-gray-900 truncate">{t.subject}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {t.tags.slice(0, 2).map((tt) => (
+                      <span key={tt.tagId} className="text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: tt.tag.color }}>
+                        {tt.tag.name}
+                      </span>
+                    ))}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${sc.cls}`}>{sc.label}</span>
+                    <span className="text-xs text-gray-400">{t.assignedTo?.name ?? "–"}</span>
+                  </div>
+                </div>
+                {/* Mobile stacked */}
+                <div className="sm:hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-mono text-gray-400">#{t.number}</span>
+                    <span className={`text-xs font-medium ${priorityConfig[t.priority]}`}>●</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sc.cls}`}>{sc.label}</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 truncate">{t.subject}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {t.tags.slice(0, 2).map((tt) => (
+                      <span key={tt.tagId} className="text-xs px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: tt.tag.color }}>
+                        {tt.tag.name}
+                      </span>
+                    ))}
+                    {t.assignedTo && <span className="text-xs text-gray-400 ml-auto">{t.assignedTo.name}</span>}
+                  </div>
                 </div>
               </a>
             );

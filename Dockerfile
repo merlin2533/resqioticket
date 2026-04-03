@@ -2,7 +2,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci || (sleep 5 && npm ci) || (sleep 10 && npm ci)
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 RUN npx prisma generate
@@ -13,7 +13,7 @@ RUN npm run build
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev || (sleep 5 && npm ci --omit=dev) || (sleep 10 && npm ci --omit=dev)
 
 # Stage 3: Production
 FROM node:22-alpine AS runner

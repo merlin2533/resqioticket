@@ -48,37 +48,39 @@ export default async function PortalDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Kunden-Portal</h1>
-          <p className="text-sm text-gray-500">Willkommen, {customer.name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {showAdminButton && (
+      <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Kunden-Portal</h1>
+            <p className="text-sm text-gray-500">Willkommen, {customer.name}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {showAdminButton && (
+              <Link
+                href="/admin"
+                className="px-3 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors"
+              >
+                Admin-Bereich →
+              </Link>
+            )}
             <Link
-              href="/admin"
-              className="px-3 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors"
+              href="/portal/submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
-              Admin-Bereich →
+              + Ticket einreichen
             </Link>
-          )}
-          <Link
-            href="/portal/submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            + Ticket einreichen
-          </Link>
-          <Link
-            href="/portal/profile"
-            className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Profil
-          </Link>
-          <LogoutButton />
+            <Link
+              href="/portal/profile"
+              className="px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              Profil
+            </Link>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
-      <main className="p-6 max-w-4xl mx-auto">
+      <main className="p-4 md:p-6 max-w-4xl mx-auto">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Meine Tickets</h2>
 
         <PortalTicketSearch tickets={tickets} />
