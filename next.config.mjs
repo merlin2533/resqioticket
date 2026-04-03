@@ -14,6 +14,7 @@ const securityHeaders = [
       "img-src 'self' data: https:",
       "font-src 'self'",
       "connect-src 'self'",
+      "worker-src 'self'",
       "frame-src 'none'",
     ].join("; "),
   },
