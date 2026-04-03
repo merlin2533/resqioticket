@@ -7,10 +7,13 @@ import { useState, useEffect } from "react";
 const nav = [
   { href: "/admin",             label: "Dashboard",    icon: "▦" },
   { href: "/admin/tickets",     label: "Tickets",      icon: "✉" },
+  { href: "/admin/kanban",      label: "Kanban",       icon: "▥" },
   { href: "/admin/stats",       label: "Statistiken",  icon: "📊" },
   { href: "/admin/agents",      label: "Agenten",      icon: "👥" },
   { href: "/admin/customers",   label: "Kunden",       icon: "🏢" },
+  { href: "/admin/projects",    label: "Projekte",     icon: "📁" },
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
+  { href: "/admin/saved-replies", label: "Textbausteine", icon: "💬" },
   { href: "/admin/automations",   label: "Automatisierung", icon: "⚡" },
   { href: "/admin/custom-fields", label: "Eigene Felder",   icon: "🔧" },
   { href: "/admin/api-docs",      label: "API Docs",        icon: "📖" },

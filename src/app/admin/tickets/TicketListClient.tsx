@@ -11,12 +11,20 @@ function getApiKey() {
   return "";
 }
 
+const typeConfig: Record<string, { label: string; cls: string }> = {
+  INCIDENT:        { label: "Incident",        cls: "bg-red-50 text-red-700" },
+  SERVICE_REQUEST: { label: "Service Request", cls: "bg-blue-50 text-blue-700" },
+  CHANGE_REQUEST:  { label: "Change Request",  cls: "bg-purple-50 text-purple-700" },
+  PROBLEM:         { label: "Problem",         cls: "bg-orange-50 text-orange-700" },
+};
+
 const statusConfig: Record<string, { label: string; cls: string }> = {
   OPEN:        { label: "Offen",          cls: "bg-blue-100 text-blue-700" },
   IN_PROGRESS: { label: "In Bearbeitung", cls: "bg-yellow-100 text-yellow-700" },
   WAITING:     { label: "Wartend",        cls: "bg-orange-100 text-orange-700" },
   RESOLVED:    { label: "Geloest",        cls: "bg-green-100 text-green-700" },
   CLOSED:      { label: "Geschlossen",    cls: "bg-gray-100 text-gray-600" },
+  ARCHIVED:    { label: "Archiviert",    cls: "bg-purple-100 text-purple-700" },
 };
 
 const priorityConfig: Record<string, { label: string; cls: string }> = {
@@ -44,10 +52,11 @@ interface Props {
   pageSize: number;
   tags: Tag[];
   agents: Agent[];
-  filters: { status?: string; priority?: string; q?: string; tag?: string };
+  projects: { id: string; name: string }[];
+  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string; type?: string };
 }
 
-export function TicketListClient({ tickets, total, page, pageSize, tags, filters }: Props) {
+export function TicketListClient({ tickets, total, page, pageSize, tags, projects, filters }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(filters.q ?? "");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -163,6 +172,26 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           {tags.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
         </select>
 
+        {/* Project filter */}
+        <select
+          value={filters.project ?? ""}
+          onChange={(e) => router.push(buildUrl({ project: e.target.value || undefined, page: "1" }))}
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Alle Projekte</option>
+          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+
+        {/* Type filter */}
+        <select
+          value={filters.type ?? ""}
+          onChange={(e) => router.push(buildUrl({ type: e.target.value || undefined, page: "1" }))}
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Alle Typen</option>
+          {Object.entries(typeConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+
         <button
           onClick={handleExport}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1.5"
@@ -170,7 +199,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           ↓ CSV
         </button>
 
-        {(filters.status || filters.priority || filters.q || filters.tag) && (
+        {(filters.status || filters.priority || filters.q || filters.tag || filters.project || filters.type) && (
           <button onClick={() => router.push("/admin/tickets")} className="text-sm text-gray-500 hover:text-red-500">✕ Reset</button>
         )}
       </div>
@@ -287,6 +316,13 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
         </div>
       )}
 
+      {/* Mobile FAB */}
+      {selectedIds.size === 0 && (
+        <Link href="/admin/tickets/new" className="md:hidden fixed bottom-4 right-4 z-30 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-95 transition-transform">
+          +
+        </Link>
+      )}
+
       {selectedIds.size > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex flex-wrap items-center gap-2 md:gap-3 z-40 max-w-[calc(100vw-2rem)]">
           <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
@@ -300,6 +336,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
             <option value="WAITING">Wartend</option>
             <option value="RESOLVED">Gelöst</option>
             <option value="CLOSED">Geschlossen</option>
+            <option value="ARCHIVED">Archiviert</option>
           </select>
           <select onChange={e => { if (e.target.value) applyBulkAction("set_priority", e.target.value); e.target.value = ""; }}
             className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-600 cursor-pointer">

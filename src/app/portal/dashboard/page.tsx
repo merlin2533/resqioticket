@@ -7,6 +7,7 @@ import { verifyAgentToken } from "@/lib/agent-session";
 import { LogoutButton } from "./LogoutButton";
 import { NotificationPreferencesCard } from "./NotificationPreferencesCard";
 import { PortalTicketSearch } from "./PortalTicketSearch";
+import { PortalPushToggle } from "@/components/pwa/PortalPushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -33,18 +34,27 @@ export default async function PortalDashboardPage() {
     select: { notifyOnComment: true, notifyOnStatusChange: true },
   });
 
-  const tickets = await prisma.ticket.findMany({
-    where: { customerId: customer.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      number: true,
-      subject: true,
-      status: true,
-      priority: true,
-      createdAt: true,
-      externalToken: true,
-    },
-  });
+  const [tickets, customerProjects] = await Promise.all([
+    prisma.ticket.findMany({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        number: true,
+        subject: true,
+        status: true,
+        priority: true,
+        createdAt: true,
+        externalToken: true,
+        projectId: true,
+        project: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.project.findMany({
+      where: { customers: { some: { customerId: customer.id } } },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,6 +65,7 @@ export default async function PortalDashboardPage() {
             <p className="text-sm text-gray-500">Willkommen, {customer.name}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <PortalPushToggle />
             {showAdminButton && (
               <Link
                 href="/admin"
@@ -83,7 +94,7 @@ export default async function PortalDashboardPage() {
       <main className="p-4 md:p-6 max-w-4xl mx-auto">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Meine Tickets</h2>
 
-        <PortalTicketSearch tickets={tickets} />
+        <PortalTicketSearch tickets={tickets} projects={customerProjects} />
         <div className="mt-8">
           <NotificationPreferencesCard
             initialNotifyOnComment={customerPrefs?.notifyOnComment ?? true}

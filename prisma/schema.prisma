@@ -13,6 +13,7 @@ enum TicketStatus {
   WAITING
   RESOLVED
   CLOSED
+  ARCHIVED
 }
 
 enum TicketPriority {
@@ -20,6 +21,13 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TicketType {
+  INCIDENT
+  SERVICE_REQUEST
+  CHANGE_REQUEST
+  PROBLEM
 }
 
 enum AgentRole {
@@ -52,6 +60,8 @@ model Agent {
   auditLogs         AuditLog[]
   watchedTickets    TicketWatcher[]
   pushSubscriptions PushSubscription[]
+  timeEntries       TimeEntry[]
+  savedReplies      SavedReply[]
 
   @@map("agents")
 }
@@ -69,9 +79,35 @@ model Customer {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  tickets Ticket[]
+  tickets  Ticket[]
+  projects ProjectCustomer[]
 
   @@map("customers")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tickets   Ticket[]
+  customers ProjectCustomer[]
+
+  @@map("projects")
+}
+
+model ProjectCustomer {
+  projectId  String
+  customerId String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([projectId, customerId])
+  @@map("project_customers")
 }
 
 model Ticket {
@@ -81,6 +117,7 @@ model Ticket {
   description   String
   status        TicketStatus   @default(OPEN)
   priority      TicketPriority @default(MEDIUM)
+  type          TicketType     @default(INCIDENT)
   email         String
   name          String
   metadata      Json?
@@ -89,6 +126,8 @@ model Ticket {
   assignedTo    Agent?         @relation(fields: [assignedToId], references: [id])
   customerId    String?
   customer      Customer?      @relation(fields: [customerId], references: [id])
+  projectId     String?
+  project       Project?       @relation(fields: [projectId], references: [id])
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
@@ -104,12 +143,15 @@ model Ticket {
   targetRelations   TicketRelation[] @relation("TargetTicket")
   customFieldValues TicketCustomFieldValue[]
   watchers          TicketWatcher[]
+  timeEntries       TimeEntry[]
 
   @@index([status])
+  @@index([type])
   @@index([priority])
   @@index([email])
   @@index([assignedToId])
   @@index([customerId])
+  @@index([projectId])
   @@index([createdAt])
   @@map("tickets")
 }
@@ -321,4 +363,34 @@ model EmailTemplate {
   updatedAt DateTime @updatedAt
 
   @@map("email_templates")
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  description String?
+  minutes     Int
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([agentId])
+  @@map("time_entries")
+}
+
+model SavedReply {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  category  String?
+  agentId   String?
+  agent     Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  isGlobal  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("saved_replies")
 }

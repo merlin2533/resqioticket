@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CommentForm } from "./comment-form";
 import { sanitizeContent } from "@/lib/sanitize";
 import { AttachmentUpload } from "./AttachmentUpload";
+import { getCustomerFromRequest } from "@/lib/customer-auth";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   OPEN: { label: "Offen", color: "bg-blue-100 text-blue-800" },
@@ -10,6 +11,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   WAITING: { label: "Wartend", color: "bg-orange-100 text-orange-800" },
   RESOLVED: { label: "Geloest", color: "bg-green-100 text-green-800" },
   CLOSED: { label: "Geschlossen", color: "bg-gray-100 text-gray-800" },
+  ARCHIVED: { label: "Archiviert", color: "bg-purple-100 text-purple-800" },
 };
 
 const priorityLabels: Record<string, { label: string; color: string }> = {
@@ -25,6 +27,8 @@ export default async function TicketPortalPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+
+  const customer = await getCustomerFromRequest().catch(() => null);
 
   const ticket = await prisma.ticket.findUnique({
     where: { externalToken: token },
@@ -66,11 +70,11 @@ export default async function TicketPortalPage({
             </span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{ticket.subject}</h1>
-          <div className="flex gap-2 mt-3">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${status.color}`}>
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
               {status.label}
             </span>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${priority.color}`}>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${priority.color}`}>
               {priority.label}
             </span>
           </div>
@@ -158,7 +162,7 @@ export default async function TicketPortalPage({
 
         {/* Comment form */}
         {ticket.status !== "CLOSED" && (
-          <CommentForm ticketToken={token} />
+          <CommentForm ticketToken={token} customerName={customer?.name ?? undefined} customerEmail={customer?.email ?? undefined} />
         )}
       </main>
 
