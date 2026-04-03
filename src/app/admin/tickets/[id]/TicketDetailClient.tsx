@@ -22,6 +22,7 @@ const priorityOptions = [
 
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string; email: string };
+type Project = { id: string; name: string; color: string };
 type Attachment = { id: string; filename: string; mimeType: string; size: number; driveUrl: string; createdAt: Date };
 type AuditLog = { id: string; action: string; oldValue: unknown; newValue: unknown; createdAt: Date };
 type Comment = { id: string; authorType: string; authorName: string; authorEmail: string; body: string; isInternal: boolean; createdAt: Date; author: Agent | null };
@@ -31,6 +32,8 @@ type Ticket = {
   id: string; number: number; subject: string; description: string;
   status: string; priority: string; email: string; name: string;
   externalToken: string; assignedToId: string | null; assignedTo: Agent | null;
+  customerId: string | null; customer: { id: string; name: string; email: string } | null;
+  projectId: string | null; project: Project | null;
   createdAt: Date; updatedAt: Date; resolvedAt: Date | null;
   comments: Comment[];
   tags: { tag: Tag }[];
@@ -44,6 +47,7 @@ interface Props {
   ticket: Ticket;
   allTags: Tag[];
   agents: Agent[];
+  projects: Project[];
 }
 
 const API_KEY = typeof window !== "undefined" ? document.cookie.match(/admin_session=([^;]+)/)?.[1] ?? "" : "";
@@ -60,11 +64,12 @@ type CustomField = {
   options: string[] | null; required: boolean; isActive: boolean; sortOrder: number;
 };
 
-export function TicketDetailClient({ ticket, allTags, agents }: Props) {
+export function TicketDetailClient({ ticket, allTags, agents, projects }: Props) {
   const router = useRouter();
   const [status, setStatus]     = useState(ticket.status);
   const [priority, setPriority] = useState(ticket.priority);
   const [assignedToId, setAssigned] = useState(ticket.assignedToId ?? "");
+  const [projectId, setProjectId] = useState(ticket.projectId ?? "");
   const [saving, setSaving]     = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentInternal, setCommentInternal] = useState(false);
@@ -156,6 +161,11 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   async function handleAssignChange(v: string) {
     setAssigned(v);
     await patchTicket({ assignedToId: v || null });
+  }
+
+  async function handleProjectChange(v: string) {
+    setProjectId(v);
+    await patchTicket({ projectId: v || null });
   }
 
   async function handleAddTag(tagId: string) {
@@ -492,6 +502,18 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
             </select>
           </div>
 
+          {/* Project */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Projekt</h3>
+            <select value={projectId} onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+              <option value="">– Kein Projekt –</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Tags */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Tags</h3>
@@ -591,6 +613,20 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Kunde */}
+          {ticket.customer && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Kunde</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-medium">{ticket.customer.name.charAt(0)}</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{ticket.customer.name}</p>
+                  <p className="text-xs text-gray-500">{ticket.customer.email}</p>
+                </div>
               </div>
             </div>
           )}

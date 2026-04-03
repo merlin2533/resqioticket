@@ -69,9 +69,27 @@ model Customer {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  tickets Ticket[]
+  tickets  Ticket[]
+  projects Project[]
 
   @@map("customers")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tickets Ticket[]
+
+  @@index([customerId])
+  @@map("projects")
 }
 
 model Ticket {
@@ -89,6 +107,8 @@ model Ticket {
   assignedTo    Agent?         @relation(fields: [assignedToId], references: [id])
   customerId    String?
   customer      Customer?      @relation(fields: [customerId], references: [id])
+  projectId     String?
+  project       Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   resolvedAt    DateTime?
@@ -110,6 +130,7 @@ model Ticket {
   @@index([email])
   @@index([assignedToId])
   @@index([customerId])
+  @@index([projectId])
   @@index([createdAt])
   @@map("tickets")
 }

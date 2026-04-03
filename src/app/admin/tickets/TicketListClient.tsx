@@ -28,6 +28,7 @@ const priorityConfig: Record<string, { label: string; cls: string }> = {
 
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string };
+type Project = { id: string; name: string; color: string };
 type Ticket = {
   id: string; number: number; subject: string; status: string; priority: string;
   email: string; name: string; createdAt: Date; assignedTo: Agent | null;
@@ -35,6 +36,7 @@ type Ticket = {
   _count: { comments: number; attachments: number };
   slaBreached: boolean;
   slaDeadline: Date | null;
+  project: Project | null;
 };
 
 interface Props {
@@ -44,10 +46,11 @@ interface Props {
   pageSize: number;
   tags: Tag[];
   agents: Agent[];
-  filters: { status?: string; priority?: string; q?: string; tag?: string };
+  projects: Project[];
+  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string };
 }
 
-export function TicketListClient({ tickets, total, page, pageSize, tags, filters }: Props) {
+export function TicketListClient({ tickets, total, page, pageSize, tags, projects, filters }: Props) {
   const router = useRouter();
   const [q, setQ] = useState(filters.q ?? "");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -163,6 +166,16 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           {tags.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
         </select>
 
+        {/* Project filter */}
+        <select
+          value={filters.project ?? ""}
+          onChange={(e) => router.push(buildUrl({ project: e.target.value || undefined, page: "1" }))}
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Alle Projekte</option>
+          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+
         <button
           onClick={handleExport}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1.5"
@@ -170,7 +183,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
           ↓ CSV
         </button>
 
-        {(filters.status || filters.priority || filters.q || filters.tag) && (
+        {(filters.status || filters.priority || filters.q || filters.tag || filters.project) && (
           <button onClick={() => router.push("/admin/tickets")} className="text-sm text-gray-500 hover:text-red-500">✕ Reset</button>
         )}
       </div>
@@ -193,6 +206,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-32">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-20">Prio</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-32">Zugewiesen</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500 w-28">Projekt</th>
               <th className="text-left px-4 py-3 font-medium text-gray-500 w-36">Erstellt</th>
             </tr>
           </thead>
@@ -232,12 +246,20 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
                   <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${sc.cls}`}>{sc.label}</span></td>
                   <td className="px-4 py-3"><span className={`text-xs font-medium ${pc.cls}`}>● {pc.label}</span></td>
                   <td className="px-4 py-3 text-gray-500">{t.assignedTo?.name ?? <span className="text-gray-300">–</span>}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {t.project ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.project.color }} />
+                        {t.project.name}
+                      </span>
+                    ) : <span className="text-gray-300">–</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-400">{new Date(t.createdAt).toLocaleDateString("de-DE")}</td>
                 </tr>
               );
             })}
             {tickets.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">Keine Tickets gefunden</td></tr>
             )}
           </tbody>
         </table>
@@ -264,6 +286,12 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, filters
                 {t._count.comments > 0 && <span className="text-xs text-gray-400">💬{t._count.comments}</span>}
                 {t.slaBreached && <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">SLA</span>}
               </div>
+              {t.project && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.project.color }} />
+                  <span className="text-xs text-gray-500">{t.project.name}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
                 <span>{t.name}</span>
                 <span>{t.assignedTo?.name ?? "–"} · {new Date(t.createdAt).toLocaleDateString("de-DE")}</span>

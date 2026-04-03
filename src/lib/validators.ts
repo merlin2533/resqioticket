@@ -7,6 +7,9 @@ export const createTicketSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(200),
   metadata: z.any().optional(),
+  customerId: z.string().optional(),
+  projectId: z.string().optional(),
+  assignedToId: z.string().optional(),
 });
 
 export const updateTicketSchema = z.object({
@@ -15,6 +18,7 @@ export const updateTicketSchema = z.object({
   status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   assignedToId: z.string().nullable().optional(),
+  projectId: z.string().nullable().optional(),
 });
 
 export const createCommentSchema = z.object({

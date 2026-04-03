@@ -10,6 +10,7 @@ const nav = [
   { href: "/admin/stats",       label: "Statistiken",  icon: "📊" },
   { href: "/admin/agents",      label: "Agenten",      icon: "👥" },
   { href: "/admin/customers",   label: "Kunden",       icon: "🏢" },
+  { href: "/admin/projects",    label: "Projekte",     icon: "📁" },
   { href: "/admin/templates",   label: "Vorlagen",     icon: "📋" },
   { href: "/admin/automations",   label: "Automatisierung", icon: "⚡" },
   { href: "/admin/custom-fields", label: "Eigene Felder",   icon: "🔧" },
