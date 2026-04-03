@@ -30,6 +30,7 @@ const typeOptions = [
 
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string; email: string };
+type Project = { id: string; name: string };
 type Attachment = { id: string; filename: string; mimeType: string; size: number; driveUrl: string; createdAt: Date };
 type AuditLog = { id: string; action: string; oldValue: unknown; newValue: unknown; createdAt: Date };
 type Comment = { id: string; authorType: string; authorName: string; authorEmail: string; body: string; isInternal: boolean; createdAt: Date; author: Agent | null };
@@ -39,7 +40,8 @@ type Ticket = {
   id: string; number: number; subject: string; description: string;
   status: string; priority: string; type: string; email: string; name: string;
   externalToken: string; assignedToId: string | null; assignedTo: Agent | null;
-  projectId: string | null;
+  customerId: string | null; customer: { id: string; name: string; email: string } | null;
+  projectId: string | null; project: Project | null;
   createdAt: Date; updatedAt: Date; resolvedAt: Date | null;
   comments: Comment[];
   tags: { tag: Tag }[];
@@ -53,6 +55,7 @@ interface Props {
   ticket: Ticket;
   allTags: Tag[];
   agents: Agent[];
+  projects: Project[];
 }
 
 const API_KEY = typeof window !== "undefined" ? document.cookie.match(/admin_session=([^;]+)/)?.[1] ?? "" : "";
@@ -69,14 +72,13 @@ type CustomField = {
   options: string[] | null; required: boolean; isActive: boolean; sortOrder: number;
 };
 
-export function TicketDetailClient({ ticket, allTags, agents }: Props) {
+export function TicketDetailClient({ ticket, allTags, agents, projects }: Props) {
   const router = useRouter();
   const [status, setStatus]     = useState(ticket.status);
   const [priority, setPriority] = useState(ticket.priority);
   const [ticketType, setTicketType] = useState(ticket.type);
   const [assignedToId, setAssigned] = useState(ticket.assignedToId ?? "");
   const [projectId, setProjectId] = useState(ticket.projectId ?? "");
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving]     = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [commentInternal, setCommentInternal] = useState(false);
@@ -114,7 +116,6 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
       setCustomValues(valMap);
     }).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/watchers`, { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(res => setWatchers(res.data ?? [])).catch(() => {});
-    fetch("/api/projects", { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(d => setProjects(d.data ?? [])).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/time-entries`, { headers: { "x-api-key": apiKey } })
       .then(r => r.json())
       .then(d => { setTimeEntries(d.data ?? []); setTotalMinutes(d.totalMinutes ?? 0); })
@@ -740,6 +741,20 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Kunde */}
+          {ticket.customer && (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Kunde</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-medium">{ticket.customer.name.charAt(0)}</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{ticket.customer.name}</p>
+                  <p className="text-xs text-gray-500">{ticket.customer.email}</p>
+                </div>
               </div>
             </div>
           )}

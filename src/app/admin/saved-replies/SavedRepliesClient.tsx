@@ -20,7 +20,7 @@ export function SavedRepliesClient({ replies }: { replies: Reply[] }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const categories = [...new Set(replies.map(r => r.category).filter(Boolean))] as string[];
+  const categories = Array.from(new Set(replies.map(r => r.category).filter((c): c is string => c !== null)));
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

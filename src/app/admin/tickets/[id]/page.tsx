@@ -10,11 +10,13 @@ export default async function AdminTicketDetailPage({
 }) {
   const { id } = await params;
 
-  const [ticket, tags, agents] = await Promise.all([
+  const [ticket, tags, agents, projects] = await Promise.all([
     prisma.ticket.findUnique({
       where: { id },
       include: {
         assignedTo: true,
+        customer: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
         comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { id: true, name: true, email: true } } } },
         tags: { include: { tag: true } },
         attachments: { orderBy: { createdAt: "desc" } },
@@ -25,9 +27,10 @@ export default async function AdminTicketDetailPage({
     }),
     prisma.tag.findMany({ orderBy: { name: "asc" } }),
     prisma.agent.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
+    prisma.project.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
   ]);
 
   if (!ticket) notFound();
 
-  return <TicketDetailClient ticket={ticket} allTags={tags} agents={agents} />;
+  return <TicketDetailClient ticket={ticket} allTags={tags} agents={agents} projects={projects} />;
 }

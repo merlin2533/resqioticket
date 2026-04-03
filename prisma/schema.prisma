@@ -110,6 +110,7 @@ model ProjectCustomer {
   @@map("project_customers")
 }
 
+
 model Ticket {
   id            String         @id @default(cuid())
   number        Int            @unique @default(autoincrement())

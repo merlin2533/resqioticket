@@ -10,6 +10,7 @@ export const createTicketSchema = z.object({
   metadata: z.any().optional(),
   customerId: z.string().optional(),
   projectId: z.string().optional(),
+  assignedToId: z.string().optional(),
 });
 
 export const updateTicketSchema = z.object({

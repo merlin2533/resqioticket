@@ -19,6 +19,7 @@ const priorityOptions = [
 ];
 
 type CustomerOption = { id: string; name: string; email: string };
+type AgentOption = { id: string; name: string };
 type ProjectOption = { id: string; name: string; customers?: { customerId: string }[] };
 
 export default function NewTicketPage() {
@@ -26,17 +27,20 @@ export default function NewTicketPage() {
 
   const [form, setForm] = useState({
     subject: "", name: "", email: "", priority: "MEDIUM", type: "INCIDENT", description: "",
-    customerId: "", projectId: "",
+    customerId: "", projectId: "", assignedToId: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
 
   useEffect(() => {
     const apiKey = getApiKey();
     fetch("/api/admin/customers", { headers: { "x-api-key": apiKey } })
       .then(r => r.json()).then(d => setCustomers(d.data ?? [])).catch(() => {});
+    fetch("/api/agents", { headers: { "x-api-key": apiKey } })
+      .then(r => r.json()).then(d => setAgents(d.data ?? [])).catch(() => {});
     fetch("/api/projects", { headers: { "x-api-key": apiKey } })
       .then(r => r.json()).then(d => setProjects(d.data ?? [])).catch(() => {});
   }, []);
@@ -72,6 +76,7 @@ export default function NewTicketPage() {
       };
       if (form.customerId) payload.customerId = form.customerId;
       if (form.projectId) payload.projectId = form.projectId;
+      if (form.assignedToId) payload.assignedToId = form.assignedToId;
 
       const res = await fetch("/api/tickets", {
         method: "POST",
@@ -85,8 +90,9 @@ export default function NewTicketPage() {
         return;
       }
 
+      const data = await res.json();
+      router.push(`/admin/tickets/${data.data.id}`);
       router.refresh();
-      router.push("/admin/tickets");
     } catch {
       setError("Netzwerkfehler – bitte erneut versuchen.");
     } finally {
@@ -110,7 +116,7 @@ export default function NewTicketPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
           </div>
 
-          {/* Customer + Project */}
+          {/* Customer + Agent assignment */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="customerId" className="block text-sm font-medium text-gray-700 mb-1">Kunde</label>
@@ -121,6 +127,25 @@ export default function NewTicketPage() {
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
               </select>
             </div>
+            <div>
+              <label htmlFor="assignedToId" className="block text-sm font-medium text-gray-700 mb-1">
+                Zugewiesen an
+              </label>
+              <select
+                id="assignedToId"
+                name="assignedToId"
+                value={form.assignedToId}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              >
+                <option value="">– Nicht zugewiesen –</option>
+                {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Project */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="projectId" className="block text-sm font-medium text-gray-700 mb-1">Projekt</label>
               <select id="projectId" name="projectId" value={form.projectId}
