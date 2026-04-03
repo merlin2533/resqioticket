@@ -25,6 +25,7 @@
     "@tiptap/pm": "^3.21.0",
     "@tiptap/react": "^3.21.0",
     "@tiptap/starter-kit": "^3.21.0",
+    "dotenv": "^17.4.0",
     "googleapis": "^171.4.0",
     "next": "14.2.35",
     "pg": "^8.20.0",
@@ -37,8 +38,8 @@
     "resend": "^6.9.4",
     "sanitize-html": "^2.17.2",
     "web-push": "^3.6.7",
-    "zod": "^4.3.6",
-    "dotenv": "^17.4.0"
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^22.19.16",

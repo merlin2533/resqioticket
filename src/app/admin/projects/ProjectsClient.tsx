@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 type Project = {
@@ -152,17 +152,69 @@ export function ProjectsClient({
   const assignedIds = new Set(projectCustomers.map((c) => c.id));
   const unassignedCustomers = allCustomers.filter((c) => !assignedIds.has(c.id));
 
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+  const importRef = useRef<HTMLInputElement>(null);
+
+  function handleExport() {
+    const cookie = document.cookie.match(/admin_session=([^;]+)/)?.[1] ?? "";
+    fetch("/api/projects/export", { headers: { "x-api-key": cookie } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `projekte-${new Date().toISOString().split("T")[0]}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true); setImportMsg("");
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/projects/import", {
+      method: "POST",
+      headers: { "x-api-key": getApiKey() },
+      body: fd,
+    });
+    const data = await res.json();
+    setImporting(false);
+    if (res.ok) {
+      setImportMsg(`${data.created} importiert, ${data.skipped} übersprungen`);
+      router.refresh();
+    } else {
+      setImportMsg(data.error ?? "Fehler beim Import");
+    }
+    if (importRef.current) importRef.current.value = "";
+  }
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900 ml-8 md:ml-0">Projekte</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          + Projekt anlegen
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+            Export Excel
+          </button>
+          <label className={`px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors cursor-pointer ${importing ? "opacity-50 pointer-events-none" : ""}`}>
+            {importing ? "Importiere..." : "Import Excel"}
+            <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+          </label>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            + Projekt anlegen
+          </button>
+        </div>
       </div>
+      {importMsg && (
+        <div className="mb-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">{importMsg}</div>
+      )}
 
       {showForm && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 mb-4">
