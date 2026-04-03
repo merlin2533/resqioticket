@@ -27,12 +27,14 @@ RUN adduser --system --uid 1001 nextjs
 # Install cron
 RUN apk add --no-cache dcron curl postgresql-client
 
-# Copy production node_modules first (includes prisma + all transitive deps for migrate deploy)
-COPY --from=deps /app/node_modules ./node_modules
-
-# Next.js standalone output (its own node_modules merge on top)
+# Next.js standalone output first (includes minimal node_modules)
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# Copy production node_modules ON TOP so prisma CLI + WASM files are complete
+COPY --from=deps /app/node_modules ./node_modules
+
+# Prisma schema, generated client, and config
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/src/generated ./src/generated
