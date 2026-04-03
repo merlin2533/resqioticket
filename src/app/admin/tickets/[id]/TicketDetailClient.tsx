@@ -361,9 +361,9 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
               {activeTab === "comments" && (
                 <div className="space-y-4">
                   {ticket.comments.map((c) => (
-                    <div key={c.id} className={`p-4 rounded-lg border ${c.isInternal ? "bg-yellow-50 border-yellow-200" : c.authorType === "AGENT" ? "bg-blue-50 border-blue-100" : c.authorType === "SYSTEM" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium ${c.authorType === "AGENT" ? "bg-blue-500" : c.authorType === "SYSTEM" ? "bg-gray-400" : "bg-green-500"}`}>
+                    <div key={c.id} className={`p-3 md:p-4 rounded-lg border ${c.isInternal ? "bg-yellow-50 border-yellow-200" : c.authorType === "AGENT" ? "bg-blue-50 border-blue-100" : c.authorType === "SYSTEM" ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200"}`}>
+                      <div className="flex items-center gap-2 mb-1 md:mb-2">
+                        <div className={`w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-white text-xs font-medium ${c.authorType === "AGENT" ? "bg-blue-500" : c.authorType === "SYSTEM" ? "bg-gray-400" : "bg-green-500"}`}>
                           {c.authorName.charAt(0).toUpperCase()}
                         </div>
                         <span className="text-sm font-medium text-gray-900">{c.authorName}</span>

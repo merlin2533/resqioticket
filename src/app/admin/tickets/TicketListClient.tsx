@@ -316,6 +316,13 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
         </div>
       )}
 
+      {/* Mobile FAB */}
+      {selectedIds.size === 0 && (
+        <Link href="/admin/tickets/new" className="md:hidden fixed bottom-4 right-4 z-30 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-blue-700 active:scale-95 transition-transform">
+          +
+        </Link>
+      )}
+
       {selectedIds.size > 0 && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-4 py-3 flex flex-wrap items-center gap-2 md:gap-3 z-40 max-w-[calc(100vw-2rem)]">
           <span className="text-sm font-medium">{selectedIds.size} ausgewählt</span>
