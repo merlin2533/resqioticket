@@ -381,7 +381,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                     <p className="text-xs text-gray-400 mb-2">
                       Verknüpft dieses Ticket als &bdquo;Duplikat von&ldquo; dem Ziel-Ticket und setzt den Status auf Geschlossen.
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         value={linkTicketNum}
                         onChange={(e) => setLinkTicketNum(e.target.value)}

@@ -16,7 +16,7 @@ const nav = [
   { href: "/admin/api-docs",      label: "API Docs",        icon: "📖" },
   { href: "/admin/audit",         label: "Audit-Log",       icon: "📜" },
   { href: "/admin/settings",         label: "Einstellungen",  icon: "⚙" },
-  { href: "/admin/email-templates",  label: "E-Mail-Vorlagen", icon: "✉" },
+  { href: "/admin/email-templates",  label: "E-Mail-Vorlagen", icon: "📧" },
 ];
 
 export function AdminSidebar() {
