@@ -36,6 +36,9 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
+# package.json is needed so `npx prisma` resolves the local installation
+COPY --from=builder /app/package.json ./package.json
+
 # Cron job for reminders (runs every hour)
 COPY cron/crontab /etc/crontabs/root
 COPY cron/reminder.sh /app/cron/reminder.sh

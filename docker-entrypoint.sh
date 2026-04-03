@@ -68,21 +68,38 @@ echo ""
 
 # ── Database migrations ───────────────────────────────────────────────────────
 info "Datenbank-Migrationen werden ausgeführt..."
-set +e
-MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
-MIGRATE_EXIT=$?
-set -e
 
-if [ $MIGRATE_EXIT -eq 0 ]; then
-  ok "Migrationen erfolgreich abgeschlossen"
-  # Show applied migrations from output if any
-  echo "$MIGRATE_OUTPUT" | grep -E "(Applying migration|No pending|migrations)" | sed 's/^/         /' || true
-else
-  err "Migration fehlgeschlagen (Exit-Code $MIGRATE_EXIT)"
+MIGRATE_SUCCESS=false
+MIGRATE_TRIES=0
+MAX_MIGRATE_TRIES=3
+
+while [ "$MIGRATE_SUCCESS" = "false" ] && [ $MIGRATE_TRIES -lt $MAX_MIGRATE_TRIES ]; do
+  MIGRATE_TRIES=$((MIGRATE_TRIES + 1))
+  set +e
+  MIGRATE_OUTPUT=$(node ./node_modules/prisma/build/index.js migrate deploy 2>&1)
+  MIGRATE_EXIT=$?
+  set -e
+
+  if [ $MIGRATE_EXIT -eq 0 ]; then
+    MIGRATE_SUCCESS=true
+    ok "Migrationen erfolgreich abgeschlossen"
+    echo "$MIGRATE_OUTPUT" | grep -E "(Applying migration|No pending|migrations)" | sed 's/^/         /' || true
+  else
+    err "Migration fehlgeschlagen (Versuch $MIGRATE_TRIES/$MAX_MIGRATE_TRIES, Exit-Code $MIGRATE_EXIT)"
+    echo "$MIGRATE_OUTPUT" | tail -5 | sed 's/^/         /'
+    if [ $MIGRATE_TRIES -lt $MAX_MIGRATE_TRIES ]; then
+      warn "Neuer Versuch in 3 Sekunden..."
+      sleep 3
+    fi
+  fi
+done
+
+if [ "$MIGRATE_SUCCESS" = "false" ]; then
+  err "Migrationen nach $MAX_MIGRATE_TRIES Versuchen fehlgeschlagen"
   echo "─── Migration Output ───────────────────────────"
   echo "$MIGRATE_OUTPUT" | sed 's/^/  /'
   echo "────────────────────────────────────────────────"
-  warn "Starte App trotzdem – bitte Datenbankverbindung und Schema prüfen"
+  warn "Starte App trotzdem – Dashboard zeigt Datenbankfehler bis Migrationen manuell ausgefuehrt werden"
 fi
 
 echo ""
