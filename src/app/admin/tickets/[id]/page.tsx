@@ -16,7 +16,7 @@ export default async function AdminTicketDetailPage({
       include: {
         assignedTo: true,
         customer: { select: { id: true, name: true, email: true } },
-        project: { select: { id: true, name: true, color: true } },
+        project: { select: { id: true, name: true } },
         comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { id: true, name: true, email: true } } } },
         tags: { include: { tag: true } },
         attachments: { orderBy: { createdAt: "desc" } },

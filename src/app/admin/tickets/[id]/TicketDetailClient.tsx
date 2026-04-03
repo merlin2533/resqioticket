@@ -30,7 +30,7 @@ const typeOptions = [
 
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string; email: string };
-type Project = { id: string; name: string; color: string };
+type Project = { id: string; name: string };
 type Attachment = { id: string; filename: string; mimeType: string; size: number; driveUrl: string; createdAt: Date };
 type AuditLog = { id: string; action: string; oldValue: unknown; newValue: unknown; createdAt: Date };
 type Comment = { id: string; authorType: string; authorName: string; authorEmail: string; body: string; isInternal: boolean; createdAt: Date; author: Agent | null };
@@ -116,7 +116,6 @@ export function TicketDetailClient({ ticket, allTags, agents, projects }: Props)
       setCustomValues(valMap);
     }).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/watchers`, { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(res => setWatchers(res.data ?? [])).catch(() => {});
-    fetch("/api/projects", { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(d => setProjects(d.data ?? [])).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/time-entries`, { headers: { "x-api-key": apiKey } })
       .then(r => r.json())
       .then(d => { setTimeEntries(d.data ?? []); setTotalMinutes(d.totalMinutes ?? 0); })
