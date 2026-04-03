@@ -7,7 +7,7 @@ import Link from "next/link";
 type ProjectOption = { id: string; name: string };
 
 export default function PortalSubmitPage() {
-  const [form, setForm] = useState({ subject: "", description: "", priority: "MEDIUM", projectId: "" });
+  const [form, setForm] = useState({ subject: "", description: "", priority: "MEDIUM", type: "INCIDENT", projectId: "" });
   const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +28,7 @@ export default function PortalSubmitPage() {
       subject: form.subject,
       description: form.description,
       priority: form.priority,
+      type: form.type,
     };
     if (form.projectId) payload.projectId = form.projectId;
 
@@ -89,6 +90,18 @@ export default function PortalSubmitPage() {
                 <option value="MEDIUM">Mittel</option>
                 <option value="HIGH">Hoch</option>
                 <option value="URGENT">Dringend</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+              <select value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+                <option value="INCIDENT">Incident</option>
+                <option value="SERVICE_REQUEST">Service Request</option>
+                <option value="CHANGE_REQUEST">Change Request</option>
+                <option value="PROBLEM">Problem</option>
               </select>
             </div>
 

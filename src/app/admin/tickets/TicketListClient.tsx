@@ -11,6 +11,13 @@ function getApiKey() {
   return "";
 }
 
+const typeConfig: Record<string, { label: string; cls: string }> = {
+  INCIDENT:        { label: "Incident",        cls: "bg-red-50 text-red-700" },
+  SERVICE_REQUEST: { label: "Service Request", cls: "bg-blue-50 text-blue-700" },
+  CHANGE_REQUEST:  { label: "Change Request",  cls: "bg-purple-50 text-purple-700" },
+  PROBLEM:         { label: "Problem",         cls: "bg-orange-50 text-orange-700" },
+};
+
 const statusConfig: Record<string, { label: string; cls: string }> = {
   OPEN:        { label: "Offen",          cls: "bg-blue-100 text-blue-700" },
   IN_PROGRESS: { label: "In Bearbeitung", cls: "bg-yellow-100 text-yellow-700" },
@@ -46,7 +53,7 @@ interface Props {
   tags: Tag[];
   agents: Agent[];
   projects: { id: string; name: string }[];
-  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string };
+  filters: { status?: string; priority?: string; q?: string; tag?: string; project?: string; type?: string };
 }
 
 export function TicketListClient({ tickets, total, page, pageSize, tags, projects, filters }: Props) {
@@ -175,6 +182,16 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
 
+        {/* Type filter */}
+        <select
+          value={filters.type ?? ""}
+          onChange={(e) => router.push(buildUrl({ type: e.target.value || undefined, page: "1" }))}
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Alle Typen</option>
+          {Object.entries(typeConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+
         <button
           onClick={handleExport}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-1.5"
@@ -182,7 +199,7 @@ export function TicketListClient({ tickets, total, page, pageSize, tags, project
           ↓ CSV
         </button>
 
-        {(filters.status || filters.priority || filters.q || filters.tag || filters.project) && (
+        {(filters.status || filters.priority || filters.q || filters.tag || filters.project || filters.type) && (
           <button onClick={() => router.push("/admin/tickets")} className="text-sm text-gray-500 hover:text-red-500">✕ Reset</button>
         )}
       </div>

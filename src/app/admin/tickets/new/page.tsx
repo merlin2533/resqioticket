@@ -25,7 +25,7 @@ export default function NewTicketPage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    subject: "", name: "", email: "", priority: "MEDIUM", description: "",
+    subject: "", name: "", email: "", priority: "MEDIUM", type: "INCIDENT", description: "",
     customerId: "", projectId: "",
   });
   const [saving, setSaving] = useState(false);
@@ -68,7 +68,7 @@ export default function NewTicketPage() {
     try {
       const payload: Record<string, string> = {
         subject: form.subject, name: form.name, email: form.email,
-        priority: form.priority, description: form.description,
+        priority: form.priority, type: form.type, description: form.description,
       };
       if (form.customerId) payload.customerId = form.customerId;
       if (form.projectId) payload.projectId = form.projectId;
@@ -160,6 +160,18 @@ export default function NewTicketPage() {
             <select id="priority" name="priority" value={form.priority} onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
               {priorityOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </div>
+
+          {/* Type */}
+          <div>
+            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Typ</label>
+            <select id="type" name="type" value={form.type} onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+              <option value="INCIDENT">Incident</option>
+              <option value="SERVICE_REQUEST">Service Request</option>
+              <option value="CHANGE_REQUEST">Change Request</option>
+              <option value="PROBLEM">Problem</option>
             </select>
           </div>
 

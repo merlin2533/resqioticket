@@ -4,6 +4,7 @@ export const createTicketSchema = z.object({
   subject: z.string().min(1, "Subject is required").max(500),
   description: z.string().min(1, "Description is required").max(100000),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().default("MEDIUM"),
+  type: z.enum(["INCIDENT", "SERVICE_REQUEST", "CHANGE_REQUEST", "PROBLEM"]).optional().default("INCIDENT"),
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(200),
   metadata: z.any().optional(),
@@ -16,6 +17,7 @@ export const updateTicketSchema = z.object({
   description: z.string().min(1).optional(),
   status: z.enum(["OPEN", "IN_PROGRESS", "WAITING", "RESOLVED", "CLOSED", "ARCHIVED"]).optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
+  type: z.enum(["INCIDENT", "SERVICE_REQUEST", "CHANGE_REQUEST", "PROBLEM"]).optional(),
   assignedToId: z.string().nullable().optional(),
   projectId: z.string().nullable().optional(),
 });

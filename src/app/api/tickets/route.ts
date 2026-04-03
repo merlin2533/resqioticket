@@ -11,6 +11,7 @@ import { emitTicketEvent } from "@/lib/sse-events";
 import { sendPushToAgent } from "@/lib/web-push";
 import { log } from "@/lib/logger";
 import { setTicketSla } from "@/lib/sla";
+import { detectPriority } from "@/lib/auto-priority";
 
 export async function GET(request: NextRequest) {
   const authError = validateApiKey(request);
@@ -85,8 +86,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Auto-detect priority if not explicitly set (default is MEDIUM)
+  const data = { ...parsed.data };
+  if (data.priority === "MEDIUM") {
+    const detected = detectPriority(data.subject, data.description);
+    if (detected) data.priority = detected;
+  }
+
   const ticket = await prisma.ticket.create({
-    data: parsed.data,
+    data,
   });
 
   // Audit log

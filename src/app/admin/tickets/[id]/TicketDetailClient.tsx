@@ -21,6 +21,13 @@ const priorityOptions = [
   { value: "URGENT", label: "Dringend",cls: "text-red-600" },
 ];
 
+const typeOptions = [
+  { value: "INCIDENT",        label: "Incident",        cls: "text-red-600" },
+  { value: "SERVICE_REQUEST", label: "Service Request", cls: "text-blue-600" },
+  { value: "CHANGE_REQUEST",  label: "Change Request",  cls: "text-purple-600" },
+  { value: "PROBLEM",         label: "Problem",         cls: "text-orange-600" },
+];
+
 type Tag = { id: string; name: string; color: string };
 type Agent = { id: string; name: string; email: string };
 type Attachment = { id: string; filename: string; mimeType: string; size: number; driveUrl: string; createdAt: Date };
@@ -30,7 +37,7 @@ type Relation = { id: string; relationType: string; related?: { id: string; numb
 
 type Ticket = {
   id: string; number: number; subject: string; description: string;
-  status: string; priority: string; email: string; name: string;
+  status: string; priority: string; type: string; email: string; name: string;
   externalToken: string; assignedToId: string | null; assignedTo: Agent | null;
   projectId: string | null;
   createdAt: Date; updatedAt: Date; resolvedAt: Date | null;
@@ -66,6 +73,7 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const router = useRouter();
   const [status, setStatus]     = useState(ticket.status);
   const [priority, setPriority] = useState(ticket.priority);
+  const [ticketType, setTicketType] = useState(ticket.type);
   const [assignedToId, setAssigned] = useState(ticket.assignedToId ?? "");
   const [projectId, setProjectId] = useState(ticket.projectId ?? "");
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
@@ -74,13 +82,21 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   const [commentInternal, setCommentInternal] = useState(false);
   const [notifyCreator, setNotifyCreator] = useState(true);
   const [sendingComment, setSendingComment] = useState(false);
-  const [activeTab, setActiveTab] = useState<"comments" | "attachments" | "relations" | "audit">("comments");
+  const [activeTab, setActiveTab] = useState<"comments" | "attachments" | "relations" | "audit" | "time">("comments");
   const [linkTicketNum, setLinkTicketNum] = useState("");
   const [linkType, setLinkType] = useState("linked");
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [savingCustomField, setSavingCustomField] = useState<string | null>(null);
   const [watchers, setWatchers] = useState<{ id: string; agentId: string; agent: { id: string; name: string; email: string } }[]>([]);
+  const [timeEntries, setTimeEntries] = useState<{id: string; agentId: string; agent: {id: string; name: string}; minutes: number; description: string | null; createdAt: Date}[]>([]);
+  const [totalMinutes, setTotalMinutes] = useState(0);
+  const [newTimeMinutes, setNewTimeMinutes] = useState("");
+  const [newTimeDesc, setNewTimeDesc] = useState("");
+  const [savingTime, setSavingTime] = useState(false);
+  const [savedReplies, setSavedReplies] = useState<{id: string; title: string; body: string; category: string | null}[]>([]);
+  const [showReplies, setShowReplies] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   void API_KEY;
 
   useEffect(() => {
@@ -99,7 +115,45 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
     }).catch(() => {});
     fetch(`/api/tickets/${ticket.id}/watchers`, { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(res => setWatchers(res.data ?? [])).catch(() => {});
     fetch("/api/projects", { headers: { "x-api-key": apiKey } }).then(r => r.json()).then(d => setProjects(d.data ?? [])).catch(() => {});
+    fetch(`/api/tickets/${ticket.id}/time-entries`, { headers: { "x-api-key": apiKey } })
+      .then(r => r.json())
+      .then(d => { setTimeEntries(d.data ?? []); setTotalMinutes(d.totalMinutes ?? 0); })
+      .catch(() => {});
+    fetch("/api/saved-replies", { headers: { "x-api-key": apiKey } })
+      .then(r => r.json())
+      .then(d => setSavedReplies(d.data ?? []))
+      .catch(() => {});
   }, [ticket.id]);
+
+  async function handleAddTimeEntry() {
+    const mins = parseInt(newTimeMinutes);
+    if (!mins || mins < 1) return;
+    setSavingTime(true);
+    const apiKey = getApiKey();
+    const res = await fetch(`/api/tickets/${ticket.id}/time-entries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+      body: JSON.stringify({ agentId: agents[0]?.id ?? "", minutes: mins, description: newTimeDesc || undefined }),
+    });
+    if (res.ok) {
+      const d = await res.json();
+      setTimeEntries(prev => [d.data, ...prev]);
+      setTotalMinutes(prev => prev + mins);
+      setNewTimeMinutes("");
+      setNewTimeDesc("");
+    }
+    setSavingTime(false);
+  }
+
+  async function handleDeleteTimeEntry(entryId: string, mins: number) {
+    const apiKey = getApiKey();
+    await fetch(`/api/tickets/${ticket.id}/time-entries?entryId=${entryId}`, {
+      method: "DELETE",
+      headers: { "x-api-key": apiKey },
+    });
+    setTimeEntries(prev => prev.filter(e => e.id !== entryId));
+    setTotalMinutes(prev => prev - mins);
+  }
 
   async function handleCustomFieldChange(fieldId: string, value: string) {
     setCustomValues(prev => ({ ...prev, [fieldId]: value }));
@@ -156,6 +210,11 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
   async function handlePriorityChange(v: string) {
     setPriority(v);
     await patchTicket({ priority: v });
+  }
+
+  async function handleTypeChange(v: string) {
+    setTicketType(v);
+    await patchTicket({ type: v });
   }
 
   async function handleAssignChange(v: string) {
@@ -283,8 +342,8 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
           {/* Tabs */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
-              {(["comments", "attachments", "relations", "audit"] as const).map((tab) => {
-                const labels = { comments: `Kommentare (${ticket.comments.length})`, attachments: `Anhänge (${ticket.attachments.length})`, relations: "Verlinkungen", audit: "Verlauf" };
+              {(["comments", "attachments", "relations", "audit", "time"] as const).map((tab) => {
+                const labels = { comments: `Kommentare (${ticket.comments.length})`, attachments: `Anhänge (${ticket.attachments.length})`, relations: "Verlinkungen", audit: "Verlauf", time: "Zeiterfassung" };
                 return (
                   <button
                     key={tab}
@@ -336,13 +395,33 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                           Mail an Ersteller senden
                         </label>
                       )}
-                      <button
-                        onClick={handleSendComment}
-                        disabled={sendingComment || !commentBody.trim()}
-                        className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                      >
-                        {sendingComment ? "Senden…" : "Kommentar senden"}
-                      </button>
+                      <div className="relative ml-auto flex items-center gap-2">
+                        <div className="relative">
+                          <button type="button" onClick={() => setShowReplies(!showReplies)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                            Textbausteine
+                          </button>
+                          {showReplies && (
+                            <div className="absolute bottom-full mb-1 left-0 w-72 max-h-64 overflow-y-auto bg-white rounded-lg shadow-xl border border-gray-200 z-10">
+                              {savedReplies.length === 0 && <p className="p-3 text-sm text-gray-400">Keine Textbausteine</p>}
+                              {savedReplies.map(r => (
+                                <button key={r.id} onClick={() => { setCommentBody(prev => prev + r.body); setShowReplies(false); }}
+                                  className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                                  <p className="text-sm font-medium text-gray-900">{r.title}</p>
+                                  <p className="text-xs text-gray-500 line-clamp-1">{r.body}</p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={handleSendComment}
+                          disabled={sendingComment || !commentBody.trim()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                        >
+                          {sendingComment ? "Senden…" : "Kommentar senden"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -460,12 +539,62 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
                   ))}
                 </div>
               )}
+
+              {/* Time Tracking Tab */}
+              {activeTab === "time" && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-700">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</p>
+                      <p className="text-xs text-blue-500">Gesamt</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input type="number" value={newTimeMinutes} onChange={e => setNewTimeMinutes(e.target.value)}
+                      placeholder="Minuten" min="1"
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                    <input type="text" value={newTimeDesc} onChange={e => setNewTimeDesc(e.target.value)}
+                      placeholder="Beschreibung (optional)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                    <button onClick={handleAddTimeEntry} disabled={savingTime || !newTimeMinutes}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                      {savingTime ? "..." : "Erfassen"}
+                    </button>
+                  </div>
+
+                  {timeEntries.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Keine Zeiteinträge</p>}
+                  {timeEntries.map(e => (
+                    <div key={e.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs">{e.agent.name.charAt(0)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">{Math.floor(e.minutes / 60)}h {e.minutes % 60}m</span>
+                          <span className="text-xs text-gray-400">{e.agent.name}</span>
+                        </div>
+                        {e.description && <p className="text-xs text-gray-500 truncate">{e.description}</p>}
+                      </div>
+                      <span className="text-xs text-gray-400">{new Date(e.createdAt).toLocaleDateString("de-DE")}</span>
+                      <button onClick={() => handleDeleteTimeEntry(e.id, e.minutes)} className="text-xs text-gray-400 hover:text-red-500">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block space-y-4">
+          {/* Type */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Typ</h3>
+            <select value={ticketType} onChange={(e) => handleTypeChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500">
+              {typeOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
           {/* Status */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Status</h3>
@@ -624,6 +753,90 @@ export function TicketDetailClient({ ticket, allTags, agents }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Mobile FAB for sidebar */}
+      <button onClick={() => setShowMobileSidebar(true)}
+        className="md:hidden fixed bottom-4 right-4 z-30 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-xl hover:bg-blue-700 active:scale-95 transition-transform">
+        ⚙
+      </button>
+
+      {showMobileSidebar && (
+        <div className="md:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMobileSidebar(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-t-2xl z-10">
+              <h3 className="font-semibold text-gray-900">Ticket-Details</h3>
+              <button onClick={() => setShowMobileSidebar(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Typ</label>
+                  <select value={ticketType} onChange={(e) => handleTypeChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                  <select value={status} onChange={(e) => handleStatusChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    {statusOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Priorität</label>
+                  <select value={priority} onChange={(e) => handlePriorityChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    {priorityOptions.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Zuweisung</label>
+                  <select value={assignedToId} onChange={(e) => handleAssignChange(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    <option value="">– Nicht zugewiesen –</option>
+                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Projekt</label>
+                <select value={projectId} onChange={(e) => handleProjectChange(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="">– Kein Projekt –</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Tags</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {ticket.tags.map(tt => (
+                    <button key={tt.tag.id} onClick={() => handleRemoveTag(tt.tag.id)}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded-full text-white hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: tt.tag.color }}>
+                      {tt.tag.name} ×
+                    </button>
+                  ))}
+                  {ticket.tags.length === 0 && <span className="text-xs text-gray-400">Keine Tags</span>}
+                </div>
+                {availableTags.length > 0 && (
+                  <select onChange={(e) => { if (e.target.value) handleAddTag(e.target.value); e.target.value = ""; }}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white">
+                    <option value="">Tag hinzufügen…</option>
+                    {availableTags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                )}
+              </div>
+              <div className="text-xs text-gray-500 space-y-1.5 pt-2 border-t border-gray-100">
+                <div className="flex justify-between"><span>Erstellt</span><span>{new Date(ticket.createdAt).toLocaleDateString("de-DE")}</span></div>
+                <div className="flex justify-between"><span>Aktualisiert</span><span>{new Date(ticket.updatedAt).toLocaleDateString("de-DE")}</span></div>
+                {ticket.resolvedAt && <div className="flex justify-between"><span>Gelöst</span><span>{new Date(ticket.resolvedAt).toLocaleDateString("de-DE")}</span></div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
