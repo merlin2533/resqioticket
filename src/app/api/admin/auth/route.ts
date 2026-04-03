@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { createAdminToken } from "@/lib/agent-session";
 import { z } from "zod";
 
-const loginSchema = z.object({ apiKey: z.string().min(1) });
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "Admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "Admin";
+
+const loginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
@@ -25,14 +32,18 @@ export async function POST(request: NextRequest) {
   let body: unknown;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
   const parsed = loginSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "API key required" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Benutzername und Passwort erforderlich" }, { status: 400 });
 
-  if (parsed.data.apiKey !== process.env.API_KEY) {
-    return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+  const { username, password } = parsed.data;
+
+  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+    return NextResponse.json({ error: "Ungültiger Benutzername oder Passwort" }, { status: 401 });
   }
 
+  const token = await createAdminToken(username);
+
   const res = NextResponse.json({ success: true });
-  res.cookies.set("admin_session", parsed.data.apiKey, {
+  res.cookies.set("admin_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

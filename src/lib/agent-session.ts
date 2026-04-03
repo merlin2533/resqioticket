@@ -74,3 +74,39 @@ export async function verifyAgentToken(token: string): Promise<AgentTokenData | 
     return null;
   }
 }
+
+// --- Admin session token (username/password based superadmin) ---
+
+export interface AdminTokenData {
+  type: "superadmin";
+  username: string;
+}
+
+export async function createAdminToken(username: string): Promise<string> {
+  const ts = Date.now().toString();
+  const payload = toBase64Url(JSON.stringify({ type: "superadmin", username }));
+  const toSign = `${payload}.${ts}`;
+  const sig = await hmacSign(toSign, getSecret());
+  return toBase64Url(`${toSign}.${sig}`);
+}
+
+export async function verifyAdminToken(token: string): Promise<AdminTokenData | null> {
+  try {
+    const decoded = fromBase64Url(token);
+    const lastDot = decoded.lastIndexOf(".");
+    if (lastDot === -1) return null;
+    const sig = decoded.slice(lastDot + 1);
+    const toSign = decoded.slice(0, lastDot);
+    if (!(await hmacVerify(toSign, sig, getSecret()))) return null;
+    const secondDot = toSign.lastIndexOf(".");
+    if (secondDot === -1) return null;
+    const ts = parseInt(toSign.slice(secondDot + 1));
+    if (Date.now() - ts > 7 * 24 * 60 * 60 * 1000) return null;
+    const payloadB64 = toSign.slice(0, secondDot);
+    const data = JSON.parse(fromBase64Url(payloadB64));
+    if (data.type !== "superadmin") return null;
+    return data as AdminTokenData;
+  } catch {
+    return null;
+  }
+}

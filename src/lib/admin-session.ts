@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { verifyAgentToken, AgentTokenData } from "./agent-session";
+import { verifyAgentToken, verifyAdminToken, AgentTokenData } from "./agent-session";
 
 export type AdminSession =
-  | { type: "api_key"; role: "SUPERADMIN" }
+  | { type: "superadmin"; role: "SUPERADMIN"; username: string }
   | { type: "agent" } & AgentTokenData;
 
 export async function getAdminSession(): Promise<AdminSession | null> {
@@ -15,10 +15,11 @@ export async function getAdminSession(): Promise<AdminSession | null> {
     if (data) return { type: "agent", ...data };
   }
 
-  // Fall back to API key session (global admin)
+  // Fall back to admin session (superadmin username/password login)
   const adminSession = cookieStore.get("admin_session")?.value;
-  if (adminSession && process.env.API_KEY && adminSession === process.env.API_KEY) {
-    return { type: "api_key", role: "SUPERADMIN" };
+  if (adminSession) {
+    const data = await verifyAdminToken(adminSession);
+    if (data) return { type: "superadmin", role: "SUPERADMIN", username: data.username };
   }
 
   return null;
@@ -27,14 +28,14 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 /** Returns true if the session has full admin access (SUPERADMIN or ADMIN role) */
 export function isFullAdmin(session: AdminSession | null): boolean {
   if (!session) return false;
-  if (session.type === "api_key") return true;
+  if (session.type === "superadmin") return true;
   return session.role === "ADMIN";
 }
 
 /** If session is AGENT role, returns their agentId for filtering; otherwise null */
 export function getAgentFilter(session: AdminSession | null): string | null {
   if (!session) return null;
-  if (session.type === "api_key") return null;
+  if (session.type === "superadmin") return null;
   if (session.role === "AGENT") return session.agentId;
   return null;
 }
