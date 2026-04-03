@@ -7,7 +7,10 @@ import { createAuditLog } from "@/lib/audit";
 import { runAutomations } from "@/lib/automations";
 import { fireWebhooks } from "@/lib/webhooks";
 import { emitTicketEvent } from "@/lib/sse-events";
+import { sendPushToWatchers } from "@/lib/web-push";
 import { log } from "@/lib/logger";
+
+const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
 export async function GET(
   request: NextRequest,
@@ -129,6 +132,26 @@ export async function PATCH(
     }).catch(() => {});
   }
 
+  // Push notification for status change to all watchers
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    sendPushToWatchers(id, {
+      title: `Ticket #${existing.number} – Status`,
+      body: `${existing.status} → ${parsed.data.status}: ${existing.subject}`,
+      url: `${APP_URL}/admin/tickets/${id}`,
+      tag: `ticket-${id}-status`,
+    }).catch(() => {});
+  }
+
+  // Push notification for priority change to all watchers
+  if (parsed.data.priority && parsed.data.priority !== existing.priority) {
+    sendPushToWatchers(id, {
+      title: `Ticket #${existing.number} – Priorität`,
+      body: `${existing.priority} → ${parsed.data.priority}: ${existing.subject}`,
+      url: `${APP_URL}/admin/tickets/${id}`,
+      tag: `ticket-${id}-priority`,
+    }).catch(() => {});
+  }
+
   // Handle assignment changes
   if (parsed.data.assignedToId && parsed.data.assignedToId !== existing.assignedToId) {
     const agent = await prisma.agent.findUnique({
@@ -146,6 +169,21 @@ export async function PATCH(
         agentName: agent.name,
       }).catch((err) => log.error("Failed to send assignment email", err));
     }
+
+    // Auto-Watch: zugewiesener Agent wird automatisch Watcher
+    prisma.ticketWatcher.upsert({
+      where: { ticketId_agentId: { ticketId: id, agentId: parsed.data.assignedToId } },
+      update: {},
+      create: { ticketId: id, agentId: parsed.data.assignedToId },
+    }).catch(() => {});
+
+    // Push to the newly assigned agent
+    sendPushToWatchers(id, {
+      title: `Ticket #${existing.number} zugewiesen`,
+      body: `Dir wurde Ticket "${existing.subject}" zugewiesen.`,
+      url: `${APP_URL}/admin/tickets/${id}`,
+      tag: `ticket-${id}-assigned`,
+    }).catch(() => {});
   }
 
   const ticket = await prisma.ticket.update({

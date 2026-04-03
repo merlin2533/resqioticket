@@ -8,6 +8,7 @@ import { runAutomations } from "@/lib/automations";
 import { Prisma } from "@/generated/prisma/client";
 import { fireWebhooks } from "@/lib/webhooks";
 import { emitTicketEvent } from "@/lib/sse-events";
+import { sendPushToAgent } from "@/lib/web-push";
 import { log } from "@/lib/logger";
 import { setTicketSla } from "@/lib/sla";
 
@@ -130,6 +131,22 @@ export async function POST(request: NextRequest) {
   }).catch(() => {});
 
   const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+  // Auto-Watch + Push for assigned agent on ticket creation
+  if (ticket.assignedToId) {
+    prisma.ticketWatcher.upsert({
+      where: { ticketId_agentId: { ticketId: ticket.id, agentId: ticket.assignedToId } },
+      update: {},
+      create: { ticketId: ticket.id, agentId: ticket.assignedToId },
+    }).catch(() => {});
+
+    sendPushToAgent(ticket.assignedToId, {
+      title: `Neues Ticket #${ticket.number}`,
+      body: `${ticket.subject} – von ${ticket.name}`,
+      url: `${appUrl}/admin/tickets/${ticket.id}`,
+      tag: `ticket-${ticket.id}-created`,
+    }).catch(() => {});
+  }
 
   return NextResponse.json(
     {

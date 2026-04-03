@@ -47,10 +47,11 @@ model Agent {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  assignedTickets Ticket[]
-  comments        Comment[]
-  auditLogs       AuditLog[]
-  watchedTickets  TicketWatcher[]
+  assignedTickets   Ticket[]
+  comments          Comment[]
+  auditLogs         AuditLog[]
+  watchedTickets    TicketWatcher[]
+  pushSubscriptions PushSubscription[]
 
   @@map("agents")
 }
@@ -243,6 +244,19 @@ model TicketWatcher {
   @@unique([ticketId, agentId])
   @@index([ticketId])
   @@map("ticket_watchers")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
+  @@map("push_subscriptions")
 }
 
 model Settings {

@@ -13,7 +13,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://unpkg.com",
       "img-src 'self' data: https:",
       "font-src 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://fcm.googleapis.com https://updates.push.services.mozilla.com",
       "worker-src 'self'",
       "frame-src 'none'",
     ].join("; "),
